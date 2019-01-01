@@ -738,10 +738,8 @@ generate_call(tree, goal, cc)       /* E_CALL */
         stack_adjust += FRAME_ALIGN;
     }
 
-    /* I_CALL is implicitly REL, so an E_IMM must be REL and we strip it. */
-
-    if (function->op == E_IMM) {
-        if (!function->u.mi.rip) error(ERROR_SEGMENT);
+    if ((function->op == E_IMM) && function->u.mi.rip) {
+        /* I_CALL is implicitly REL, E_IMM -> E_CON */
         function->u.mi.rip = 0;
         normalize(function);
     }
@@ -1024,6 +1022,7 @@ generate_addr(tree, goal, cc)       /* E_ADDR */
     tree->op = E_IMM;
     free_type(tree->type);
     tree->type = type;
+    normalize(tree);
 
     return generate_leaf(tree, goal, cc);
 }

@@ -222,10 +222,9 @@ extern struct defuse *  find_defuse_by_symbol();
 #define ERROR_CONEXPR       47      /* constant expression required */
 #define ERROR_DIV0          48      /* division by zero */
 #define ERROR_BADEXPR       49      /* illegal constant expression */
-#define ERROR_SEGMENT       50      /* wrong segment */
-#define ERROR_BADINIT       51      /* bad initializer */
-#define ERROR_DUPDEF        52      /* duplicate definition */
-#define ERROR_MISPLACED     53      /* misplaced break, continue or case */
-#define ERROR_DANGLING      54      /* undefined label */
-#define ERROR_DUPCASE       55      /* duplicate case label */
-#define ERROR_CASE          56      /* switch/case must be integral */
+#define ERROR_BADINIT       50      /* bad initializer */
+#define ERROR_DUPDEF        51      /* duplicate definition */
+#define ERROR_MISPLACED     52      /* misplaced break, continue or case */
+#define ERROR_DANGLING      53      /* undefined label */
+#define ERROR_DUPCASE       54      /* duplicate case label */
+#define ERROR_CASE          55      /* switch/case must be integral */

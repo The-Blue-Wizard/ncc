@@ -107,7 +107,6 @@ static char *errors[] =
     "constant expression required",         /* ERROR_CONEXPR */
     "division by 0",                        /* ERROR_DIV0 */
     "illegal constant expression",          /* ERROR_BADEXPR */
-    "wrong segment for function call",      /* ERROR_SEGMENT */
     "bad initializer",                      /* ERROR_BADINIT */
     "duplicate definition",                 /* ERROR_DUPDEF */
     "misplaced break, continue or case",    /* ERROR_MISPLACED */
