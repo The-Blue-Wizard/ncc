@@ -71,11 +71,17 @@ static initialize();
    position in the data segment. 'type' is NOT consumed. */
 
 static
-initialize_scalar(type)
+initialize_scalar(type, outermost)
     struct type * type;
 {
     struct symbol * symbol;
     struct tree *   tree;
+    int             braced = 0;
+
+    if (outermost && (token.kk == KK_LBRACE)) {
+        ++braced;
+        lex();
+    }
 
     /* fake an assignment to a fake symbol of the right type, then discard
        everything but the right side of the assignment expression. */
@@ -108,27 +114,37 @@ initialize_scalar(type)
     }
 
     free_tree(tree);
+    if (braced) match(KK_RBRACE);
 }
 
 static
-initialize_array(type)
+initialize_array(type, outermost)
     struct type * type;
 {
     struct type * element_type;
     int           nr_elements = 0;
+    int           braced = 0;
 
     element_type = type->next;
+    if (outermost) expect(KK_LBRACE);
+
+    if (token.kk == KK_LBRACE) {
+        ++braced;
+        lex();
+    }
 
     if ((element_type->ts & T_IS_CHAR) && (token.kk == KK_STRLIT)) {
         nr_elements = token.u.text->length;
-        if (nr_elements != type->nr_elements) nr_elements++;
+        if (nr_elements != type->nr_elements) ++nr_elements; /* auto NUL */
         output_string(token.u.text, nr_elements);
         lex();
     } else {
-        match(KK_LBRACE);
-        while (token.kk != KK_RBRACE) {
-            initialize(element_type);
-            nr_elements++;
+        for (;;) {
+            initialize(element_type, 0);
+            ++nr_elements;
+
+            if (type->nr_elements && (nr_elements == type->nr_elements)) 
+                break;
 
             if (token.kk == KK_COMMA) {
                 lex();
@@ -136,8 +152,9 @@ initialize_array(type)
             } else
                 break;
         }
-        match(KK_RBRACE);
     }
+
+    if (braced) match(KK_RBRACE);
 
     if (type->nr_elements == 0) type->nr_elements = nr_elements;
     if ((type->nr_elements == 0) || (nr_elements > type->nr_elements)) error(ERROR_BADINIT);
@@ -147,24 +164,29 @@ initialize_array(type)
 }
 
 static 
-initialize_struct(type)
+initialize_struct(type, outermost)
     struct type * type;
 {
     struct symbol * member;
     int             offset_bits = 0;
     int             adjust_bits;
+    int             braced = 0;
 
-    match(KK_LBRACE);
+    if (outermost) expect(KK_LBRACE);
+    if (token.kk == KK_LBRACE) {
+        ++braced;
+        lex();
+    }
+
     member = type->tag->list;
     if (type->tag->ss & S_UNION) error(ERROR_BADINIT);
 
-    while (token.kk != KK_RBRACE) {
-        if (member == NULL) error(ERROR_BADINIT);
+    for (;;) {
         adjust_bits = (member->i * BITS) + T_GET_SHIFT(member->type->ts) - offset_bits;
         initialize_bits(0, adjust_bits % 8);
         if (adjust_bits / BITS) output(" .fill %d,0\n", adjust_bits / 8);
         offset_bits += adjust_bits;
-        initialize(member->type);
+        initialize(member->type, 0);
 
         if (member->type->ts & T_FIELD) 
             offset_bits += T_GET_SIZE(member->type->ts);
@@ -178,24 +200,25 @@ initialize_struct(type)
             break;
 
         member = member->list;
+        if (member == NULL) break;
     }
 
-    match(KK_RBRACE);
+    if (braced) match(KK_RBRACE);
     adjust_bits = (size_of(type) * BITS) - offset_bits;
     initialize_bits(0, adjust_bits % BITS);
     if (adjust_bits / BITS) output(" .fill %d,0\n", adjust_bits / 8);
 }
 
 static
-initialize(type)
+initialize(type, outermost)
     struct type * type;
 {
     if (type->ts & T_IS_SCALAR)
-        initialize_scalar(type);
+        initialize_scalar(type, outermost);
     else if (type->ts & T_ARRAY)
-        initialize_array(type);
+        initialize_array(type, outermost);
     else if (type->ts & T_TAG)
-        initialize_struct(type);
+        initialize_struct(type, outermost);
     else
         error(ERROR_INTERNAL);
 }
@@ -210,6 +233,7 @@ initializer(symbol, ss)
 {
     struct tree *  tree;
     struct block * saved_block;
+    int            braced = 0;
 
     if (symbol->ss & S_BLOCK) size_of(symbol->type);
 
@@ -227,7 +251,7 @@ initializer(symbol, ss)
             segment(SEGMENT_DATA);
             output(".align %d\n", align_of(symbol->type));
             output("%G:", symbol);
-            initialize(symbol->type);
+            initialize(symbol->type, 1);
             symbol->ss |= S_DEFINED;
             current_block = saved_block;
         } else
@@ -235,12 +259,19 @@ initializer(symbol, ss)
     } else {
         if (token.kk == KK_EQ) {
             lex();
+
+            if (token.kk == KK_LBRACE) {
+                ++braced;
+                lex();
+            }
+
             if (symbol->ss & S_TYPEDEF) error(ERROR_BADINIT);
             if (ss & S_EXTERN) error(ERROR_BADINIT);
             if (!(symbol->type->ts & T_IS_SCALAR)) error(ERROR_BADINIT);
             tree = symbol_tree(symbol);
             tree = assignment_expression(tree);
             generate(tree, GOAL_EFFECT, NULL);
+            if (braced) match(KK_RBRACE);
         }
     }
 }
