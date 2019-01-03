@@ -151,10 +151,6 @@ extern struct defuse *  find_defuse_by_symbol();
 #define FIND_DEFUSE_NORMAL      0
 #define FIND_DEFUSE_CREATE      1
 
-/* flags for generate() */
-
-#define GENERATE_LVALUE         0x00000001
-
 /* flags for declarations() */
 
 #define DECLARATIONS_ARGS       0x00000001
