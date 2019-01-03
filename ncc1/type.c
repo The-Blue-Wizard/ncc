@@ -206,9 +206,10 @@ validate_type(type)
 }
 
 /* adjust and validate the type of a formal argument.
-     1. arrays become pointers, and
-     2. functions become pointers to function.
-     3. structs/unions are prohibited. */
+     1. arrays become pointers, 
+     2. functions become pointers to function,
+     3. floats become doubles, and
+     4. structs/unions are prohibited. */
 
 struct type *
 argument_type(type)
@@ -221,6 +222,7 @@ argument_type(type)
 
     if (type->ts & T_FUNC) type = splice_types(new_type(T_PTR), type);
     if (type->ts & T_TAG) error(ERROR_STRUCT);
+    if (type->ts & T_FLOAT) type->ts = T_LFLOAT;
 
     return type;
 }

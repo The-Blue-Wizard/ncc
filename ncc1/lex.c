@@ -47,6 +47,8 @@ static char * yytext;       /* pointer into yytext */
 
 static struct token next = { KK_NL };  
 
+/* process a floating-point constant */
+
 static
 fcon()
 {
@@ -56,13 +58,6 @@ fcon()
     kk = KK_LFCON;
     errno = 0;
     token.u.f = strtod(yytext, &endptr);
-    if (toupper(yych) != 'L') {
-        errno = 0;
-        kk = KK_FCON;
-        token.u.f = strtof(yytext, &endptr);
-    } else
-        yynext();
-
     if (errno == ERANGE) error(ERROR_FRANGE);
     if (errno || *endptr) error(ERROR_BADFCON);
     return kk;
@@ -173,9 +168,9 @@ yystash(c)
 static char * keyword[] =
 {
     "auto", "break", "case", "char", "continue", "default", "do",
-    "else", "extern", "float", "for", "goto", "if", "int", "long", 
-    "register", "return", "short", "sizeof", "static", "struct", 
-    "switch", "typedef", "union", "unsigned", "while"
+    "double", "else", "extern", "float", "for", "goto", "if", "int", 
+    "long", "register", "return", "short", "sizeof", "static", 
+    "struct", "switch", "typedef", "union", "unsigned", "while"
 };
 
 #define NR_KEYWORDS (sizeof(keyword)/sizeof(*keyword))
@@ -193,10 +188,7 @@ yyinit()
     yynext();
 }
 
-/* determine the type and value of numeric constants. note that 
-   we differ from K&R here: constants aren't auto-promoted based
-   on value. they're 'int' or 'float' unless suffixed with L, in
-   which case they are 'long' or 'long float'. */
+/* determine the type and value of integral constants. */
 
 static 
 icon()
@@ -206,16 +198,17 @@ icon()
     int           kk;
 
     errno = 0;
-    kk = KK_LCON;
+    kk = KK_ICON;
     value = strtoul(yytext, &endptr, 0);
     if (errno == ERANGE) error(ERROR_IRANGE);
 
     if (toupper(yych) != 'L') {
-        kk = KK_ICON;
-        if ((*yytext != '0') && (value > INT_MAX)) error(ERROR_IRANGE);
-        if ((*yytext == '0') && (value > UINT_MAX)) error(ERROR_IRANGE);
-    } else 
+        if ((*yytext != '0') && (value > INT_MAX)) kk = KK_LCON;
+        if ((*yytext == '0') && (value > UINT_MAX)) kk = KK_LCON;
+    } else {
         yynext();   /* eat 'L' */
+        kk = KK_LCON;
+    }
 
     if (errno || *endptr) error(ERROR_BADICON);
     token.u.i = value;

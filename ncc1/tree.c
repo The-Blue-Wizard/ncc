@@ -303,8 +303,9 @@ lvalue(tree)
 /* perform standard promotions on a tree. this is called in most
    circumstances before a tree is used as an operand. it will:
    1. convert all char or short to int,
-   2. convert array into rvalue pointer to its first element,
-   3. convert function to pointer-to-function. */
+   2. convert all float to double,
+   3. convert array into rvalue pointer to its first element,
+   4. convert function to pointer-to-function. */
 
 static struct tree *
 promote(tree)
@@ -314,6 +315,9 @@ promote(tree)
 
     if (tree->type->ts & (T_IS_CHAR | T_IS_SHORT))
         return new_tree(E_CAST, new_type(T_INT), tree);
+
+    if (tree->type->ts & T_FLOAT)
+        return new_tree(E_CAST, new_type(T_LFLOAT), tree);
 
     if (tree->type->ts & T_FUNC) return addr_tree(tree);
 
@@ -579,6 +583,7 @@ is_type_specifier()
     case KK_INT:
     case KK_LONG:
     case KK_FLOAT:
+    case KK_DOUBLE:
     case KK_UNSIGNED:
         return 1;
     }

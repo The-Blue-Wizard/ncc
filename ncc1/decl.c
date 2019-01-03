@@ -203,6 +203,7 @@ type_specifier(ss)
 
     case KK_INT: lex(); return new_type(T_INT);
     case KK_FLOAT: lex(); return new_type(T_FLOAT);
+    case KK_DOUBLE: lex(); return new_type(T_LFLOAT);
     case KK_CHAR: lex(); return new_type(T_CHAR);
     }
 
