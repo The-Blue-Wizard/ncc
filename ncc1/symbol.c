@@ -247,8 +247,9 @@ find_label(id)
 }
 
 /* find a symbol with the given 'id' in the namespace 'ss'
-   between scopes 'start' and 'end' (inclusive). returns NULL
-   if nothing found. */
+   between scopes 'start' and 'end' (inclusive). symbols marked 
+   S_LURKER are ignored, unless S_LURKER is one of the flags 
+   specified in 'ss'. returns NULL if no symbol found. */
 
 struct symbol *
 find_symbol(id, ss, start, end)
@@ -262,6 +263,7 @@ find_symbol(id, ss, start, end)
         if (symbol->scope < start) break;
         if (symbol->scope > end) continue;
         if (symbol->id != id) continue;
+        if ((symbol->ss & S_LURKER) && !(ss & S_LURKER)) continue;
         if ((symbol->ss & ss) == 0) continue;
         return symbol;
     }

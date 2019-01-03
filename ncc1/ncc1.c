@@ -89,7 +89,6 @@ static char *errors[] =
     "duplicate member declaration",         /* ERROR_REMEMBER */
     "illegal/incompatible redeclaration",   /* ERROR_REDECL */
     "unknown argument identifier",          /* ERROR_NOTARG */
-    "declare functions at file scope",      /* ERROR_NOFUNC */
     "can't do that with typedef",           /* ERROR_TYPEDEF */
     "unknown identifier",                   /* ERROR_UNKNOWN */
     "illegal operand(s)",                   /* ERROR_OPERANDS */

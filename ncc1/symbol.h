@@ -109,6 +109,13 @@ struct string
 
 #define S_ARG           0x00000400
 
+    /* extern variables that appear in inner scopes but have
+       not been explicitly declared at file scope are S_LURKERs
+       in SCOPE_GLOBAL. they're generally ignored except when
+       specifically requested: see symbol.c/find_symbol(). */
+
+#define S_LURKER        0x20000000
+
     /* the S_REFERENCED flag is set on a symbol once it's
        actually used in an expression. we only care about this
        on S_EXTERNs, and that's just to keep from emitting 

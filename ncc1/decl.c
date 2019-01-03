@@ -420,10 +420,25 @@ declare_local(ss, id, type)
 {
     struct symbol * symbol;
 
-    if (ss & S_EXTERN) error(ERROR_SCLASS);
-    if (ss == S_NONE) ss = S_LOCAL;
-    if (type->ts & T_FUNC) error(ERROR_NOFUNC);
+    if (type->ts & T_FUNC) {
+        if (!ss) ss = S_EXTERN;
+        if (ss != S_EXTERN) error(ERROR_SCLASS);
+    }
 
+    if (ss & S_EXTERN) {
+        symbol = find_symbol(id, S_EXTERN | S_LURKER, SCOPE_GLOBAL, SCOPE_GLOBAL);
+
+        if (symbol)
+            check_types(symbol->type, type, 0);
+        else {
+            symbol = new_symbol(id, S_EXTERN | S_LURKER, copy_type(type));
+            put_symbol(symbol, SCOPE_GLOBAL);
+        }
+
+        symbol->ss |= S_REFERENCED;
+    } 
+
+    if (ss == S_NONE) ss = S_LOCAL;
     symbol = find_symbol(id, S_NORMAL, current_scope, current_scope);
     if (symbol) error(ERROR_REDECL);
     symbol = new_symbol(id, ss, type);
@@ -518,7 +533,7 @@ declare_global(ss, id, type, args)
     if (ss & (S_AUTO | S_REGISTER)) error(ERROR_SCLASS);
     effective_ss = (ss == S_NONE) ? S_EXTERN : ss;
 
-    symbol = find_symbol(id, S_NORMAL, SCOPE_GLOBAL, SCOPE_GLOBAL);
+    symbol = find_symbol(id, S_NORMAL | S_LURKER, SCOPE_GLOBAL, SCOPE_GLOBAL);
 
     if (symbol) {
         if (symbol->ss & effective_ss & (S_EXTERN | S_STATIC)) {
@@ -530,6 +545,8 @@ declare_global(ss, id, type, args)
         symbol = new_symbol(id, effective_ss, type);
         put_symbol(symbol, SCOPE_GLOBAL);
     }
+
+    symbol->ss &= ~S_LURKER;
 
     if (symbol->type->ts & T_FUNC) {
         if (args || ((token.kk != KK_COMMA) && (token.kk != KK_SEMI))) {

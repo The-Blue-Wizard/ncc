@@ -71,23 +71,6 @@ constants. Both K&R and ANSI rules for classifying constants are dependent
 on the value and base of the constant, as well as the implementation-specific
 ranges of the integral types. 
 
-
-=======
-DEFECTS
-=======
-
-* 'extern' objects must be declared at file scope.
-
-K&R and ANSI both allow 'extern' objects to appear in local scopes. This
-results in a lot of extra bookkeeping in the front end because:
-
-    1. all such objects must have compatible declarations, and
-    2. such declarations can't be exported to the global scope.
-
-This means that "invisible" entries need to hang around the symbol table,
-and that just makes a mess, for no good reason that I can determine. This 
-is a minor issue that can be fixed pretty easily. I'm just lazy.
-
 Charles Youse <charles@gnuless.org>
-January 2, 2019
+January 3, 2019
 

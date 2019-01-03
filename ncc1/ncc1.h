@@ -200,27 +200,27 @@ extern struct defuse *  find_defuse_by_symbol();
 #define ERROR_REMEMBER      29      /* duplicate member declaration */
 #define ERROR_REDECL        30      /* illegal redeclaration */
 #define ERROR_NOTARG        31      /* unknown argument identifier */
-#define ERROR_NOFUNC        32      /* functions must be globals */
-#define ERROR_TYPEDEF       33      /* can't do that with typedef */
-#define ERROR_UNKNOWN       34      /* unknown identifier */
-#define ERROR_OPERANDS      35      /* illegal operands */
-#define ERROR_INCOMPAT      36      /* incompatible operands */
-#define ERROR_LVALUE        37      /* not an lvalue */
-#define ERROR_ABSTRACT      38      /* abstract declarator required */
-#define ERROR_MISSING       39      /* declarator missing identifier */
-#define ERROR_BADCAST       40      /* bad typecast */
-#define ERROR_INDIR         41      /* illegal indirection */
-#define ERROR_NOTSTRUCT     42      /* left side must be struct */
-#define ERROR_NOTMEMBER     43      /* not a member of that struct/union */
-#define ERROR_NEEDFUNC      44      /* function type required */
-#define ERROR_INTERNAL      45      /* compiler internal error */
-#define ERROR_REGISTER      46      /* can't take address of register */
-#define ERROR_CONEXPR       47      /* constant expression required */
-#define ERROR_DIV0          48      /* division by zero */
-#define ERROR_BADEXPR       49      /* illegal constant expression */
-#define ERROR_BADINIT       50      /* bad initializer */
-#define ERROR_DUPDEF        51      /* duplicate definition */
-#define ERROR_MISPLACED     52      /* misplaced break, continue or case */
-#define ERROR_DANGLING      53      /* undefined label */
-#define ERROR_DUPCASE       54      /* duplicate case label */
-#define ERROR_CASE          55      /* switch/case must be integral */
+#define ERROR_TYPEDEF       32      /* can't do that with typedef */
+#define ERROR_UNKNOWN       33      /* unknown identifier */
+#define ERROR_OPERANDS      34      /* illegal operands */
+#define ERROR_INCOMPAT      35      /* incompatible operands */
+#define ERROR_LVALUE        36      /* not an lvalue */
+#define ERROR_ABSTRACT      37      /* abstract declarator required */
+#define ERROR_MISSING       38      /* declarator missing identifier */
+#define ERROR_BADCAST       39      /* bad typecast */
+#define ERROR_INDIR         40      /* illegal indirection */
+#define ERROR_NOTSTRUCT     41      /* left side must be struct */
+#define ERROR_NOTMEMBER     42      /* not a member of that struct/union */
+#define ERROR_NEEDFUNC      43      /* function type required */
+#define ERROR_INTERNAL      44      /* compiler internal error */
+#define ERROR_REGISTER      45      /* can't take address of register */
+#define ERROR_CONEXPR       46      /* constant expression required */
+#define ERROR_DIV0          47      /* division by zero */
+#define ERROR_BADEXPR       48      /* illegal constant expression */
+#define ERROR_BADINIT       49      /* bad initializer */
+#define ERROR_DUPDEF        50      /* duplicate definition */
+#define ERROR_MISPLACED     51      /* misplaced break, continue or case */
+#define ERROR_DANGLING      52      /* undefined label */
+#define ERROR_DUPCASE       53      /* duplicate case label */
+#define ERROR_CASE          54      /* switch/case must be integral */
+
