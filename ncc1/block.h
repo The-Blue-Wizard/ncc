@@ -215,7 +215,7 @@ struct insn
 
     /* the instructions */
 
-#define I_NOP       (   0 | I_0_OPERANDS )
+#define I_NONE      (   0 | I_0_OPERANDS )
 #define I_MOV       (   1 | I_2_OPERANDS | I_DEF(0) | I_USE(1) )
 #define I_MOVSX     (   2 | I_2_OPERANDS | I_DEF(0) | I_USE(1) )
 #define I_MOVZX     (   3 | I_2_OPERANDS | I_DEF(0) | I_USE(1) )
@@ -274,3 +274,5 @@ struct insn
 #define I_RET       (  56 | I_0_OPERANDS )
 #define I_INC       (  57 | I_1_OPERANDS | I_DEF(0) | I_USE(0) | I_DEF_CC )
 #define I_DEC       (  58 | I_1_OPERANDS | I_DEF(0) | I_USE(0) | I_DEF_CC )
+
+#define I_ANY       ( 200 | I_0_OPERANDS )

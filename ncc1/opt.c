@@ -146,32 +146,34 @@ logues()
     put_insn(exit_block, new_insn(I_RET), NULL);
 }
 
-/* early substitutions. */
+/* peephole optimizations */
 
 static
-early_subs(block)
+peeps(block)
     struct block * block;
 {
     struct insn * insn;
-    int           ret = 0;
 
-    for (insn = block->first_insn; insn; insn = insn->next) {
-        switch (insn->opcode)
+    for (insn = block->first_insn; insn; insn = insn->next) 
+    {
+        /* AND <reg>, <??> -> TEST <reg>, <??> */
+
         {
-        case I_AND:
-            /* AND <reg>, <??> -> TEST <reg>, <??> (if <reg> is dead) */
+            static struct peep_match test[] = 
+            {
+                { I_AND, 0, { { T_IS_SCALAR, PMO_REG | PMO_DEAD } } },
+                { I_NONE }
+            };
 
-            if (    (insn->operand[0]->op == E_REG) 
-                &&  reg_is_dead(block, insn, insn->operand[0]->u.reg) )
+            if (peep_match(block, insn, test)) 
             {
                 insn->opcode = I_TEST;
-                ++ret;
+                return -1;
             }
-            break;
         }
     }
 
-    return ret;
+    return 0;
 }
 
 
@@ -196,51 +198,65 @@ log_2(x)
     return -1;
 }
 
-/* late substitutions. */
+/* late peephole optimizations are simple one-for-one substitutions.
+   they aren't processed until the late minute because they have the
+   potential to obscure other optimizations. */
 
 static
-late_subs(block)
+late_peeps(block)
     struct block * block;
 {
     struct insn * insn;
     int           i;
 
     for (insn = block->first_insn; insn; insn = insn->next) {
-        switch (insn->opcode) {
-        case I_ADD:
+        { 
             /* ADD <??>, 1 -> INC <??>
-               ADD <??>, -1 -> DEC <??> */
+               SUB <??>, -1 -> INC <??> */
 
-            if (    (insn->operand[1]->op == E_CON) 
-                &&  !(insn->flags & INSN_FLAG_CC) ) 
+            static struct peep_match test1[] = 
             {
-                if (insn->operand[1]->u.con.i == 1) {
-                    insn->opcode = I_INC;
-                    free_tree(insn->operand[1]);
-                    insn->operand[1] = NULL;
-                } else if (insn->operand[1]->u.con.i == -1) {
-                    insn->opcode = I_DEC;
-                    free_tree(insn->operand[1]);
-                    insn->operand[1] = NULL;
-                }
+                { I_ADD, PMI_CCS_UNUSED, { { T_IS_SCALAR }, { T_IS_SCALAR, PMO_CON | PMO_VALUE, 1 } } },
+                { I_NONE }
+            };
+
+            static struct peep_match test2[] = 
+            {
+                { I_SUB, PMI_CCS_UNUSED, { { T_IS_SCALAR }, { T_IS_SCALAR, PMO_CON | PMO_VALUE, -1 } } },
+                { I_NONE }
+            };
+
+            if (peep_match(block, insn, test1) || peep_match(block, insn, test2)) {
+                insn->opcode = I_INC;
+                free_tree(insn->operand[1]);
+                insn->operand[1] = NULL;
             }
+        }
 
-            break;
+        { 
+            /* ADD <??>, -1 -> DEC <??>
+               SUB <??>, 1 -> DEC <??> */
 
-        case I_SUB:
-            /* SUB <??>, 1 -> DEC <??> */
-
-            if (    (insn->operand[1]->op == E_CON)
-                &&  (insn->operand[1]->u.con.i == 1)
-                &&  !(insn->flags & INSN_FLAG_CC) )
+            static struct peep_match test1[] = 
             {
+                { I_SUB, PMI_CCS_UNUSED, { { T_IS_SCALAR }, { T_IS_SCALAR, PMO_CON | PMO_VALUE, 1 } } },
+                { I_NONE }
+            };
+
+            static struct peep_match test2[] = 
+            {
+                { I_ADD, PMI_CCS_UNUSED, { { T_IS_SCALAR }, { T_IS_SCALAR, PMO_CON | PMO_VALUE, -1 } } },
+                { I_NONE }
+            };
+
+            if (peep_match(block, insn, test1) || peep_match(block, insn, test2)) {
                 insn->opcode = I_DEC;
                 free_tree(insn->operand[1]);
                 insn->operand[1] = NULL;
             }
+        }
 
-            break;
-
+#if 0
         case I_IMUL:
             /* IMUL <??>, x (power of 2) -> SHL <??>, log2(x) */
 
@@ -254,7 +270,6 @@ late_subs(block)
             
             break;
 
-#if 0
         case I_MOV:
 
             /* MOV <reg>, 0 -> XOR <reg>, <reg> */
@@ -271,70 +286,8 @@ late_subs(block)
             
             break;
 #endif
-        }
 
     }
-}
-
-/* temp_peep() deals with a number of related constructs that the
-   code generator emits due to its [over-]use of temporaries. these
-   are unsophisticated transforms that [almost] qualify as peephole.
-
-    [A] 
-
-        (1) <op> REG_A, <???>
-        (2) MOV REG_B, REG_A
-
-        replace REG_A with REG_B in (1) and eliminate (2). */
- 
-static
-temp_peep(block)
-    struct block * block;
-{
-    struct insn * insn;
-    struct insn * next;
-    int           kills = 0;
-    int           reg_a;
-    int           reg_b;
-
-    for (insn = block->first_insn; insn; insn = next) {
-        next = insn->next;
-        if (next == NULL) break;
-
-        /* (2) must be a MOV REG_B, REG_A */
-            
-        if (next->opcode != I_MOV) continue;
-        if (next->operand[0]->op != E_REG) continue;
-        if (next->operand[1]->op != E_REG) continue;
-        reg_a = next->operand[1]->u.reg;
-        reg_b = next->operand[0]->u.reg;
-        if (reg_a == reg_b) continue;  /* different optimization */
-  
-        /* (1) must look like <op> REG_A, ...
-           it must DEF, but not USE, REG_A.
-           REG_A must be the same form as in (2)
-           REG_A must be dead after (2) */
-
-        if (insn->operand[0]->op != E_REG) continue;
-        if (insn->operand[0]->u.reg != reg_a) continue;     
-
-        if (    size_of(insn->operand[0]->type)  /* e.g., AL != EAX */
-             != size_of(next->operand[1]->type) ) continue;
-
-        if (!insn_defs_reg(insn, reg_a)) continue;
-        if (insn_uses_reg(insn, reg_a)) continue;
-        if (!reg_is_dead(block, next, reg_a)) continue;
-
-        /* looks good. make the replacement in (1) and kill (2).
-           alter the 'next' pointer to reexamine the result anew. */
-   
-        insn_replace_reg(insn, reg_a, reg_b);
-        kill_insn(block, next);  
-        next = insn; 
-        ++kills;        
-    }
-
-    return -kills; 
 }
 
 /* remove dead code (dead stores): any instruction that
@@ -393,6 +346,18 @@ con_prop(block)
     struct defuse * defuse;
     struct block  * test_block;
     struct block  * succ;
+
+    static struct peep_match mov_con[] = 
+    {
+        { I_MOV, 0, { { T_INT, PMO_REG | PMO_UNALIASED }, { T_INT, PMO_CON } } },
+        { I_NONE }
+    };
+
+    static struct peep_match test[] = 
+    {
+        { I_TEST, 0, { { T_IS_INT, PMO_REG }, { T_IS_INT, PMO_REG | PMO_SAME_AS(0, 0) } } },
+        { I_NONE }
+    };
     
     for (insn = block->first_insn; insn; insn = insn->next) {
         /* first, invalidate all the
@@ -401,26 +366,16 @@ con_prop(block)
         j = insn_nr_defs(insn);
 
         for (i = 0; i < j; ++i) {
-            defuse = find_defuse(block, insn->regs_defd[i], 
-                FIND_DEFUSE_NORMAL);
-
+            defuse = find_defuse(block, insn->regs_defd[i], FIND_DEFUSE_NORMAL);
             if (defuse) defuse->dus &= ~DU_CON;
         }
 
-        /* look for a MOV <reg>, <con> 
-           that meets our constraints */
+        /* if a MOV <reg>, <con> that meets our constraints,
+           then remember its value */
 
-        if (insn->opcode != I_MOV) continue;
-        if (insn->operand[1]->op != E_CON) continue;
-        if (insn->operand[0]->op != E_REG) continue;
+        if (!peep_match(block, insn, mov_con)) continue;
         reg = insn->operand[0]->u.reg;
         defuse = find_defuse(block, reg, FIND_DEFUSE_NORMAL);
-        if (!defuse) continue;
-        if (!(defuse->symbol->ss & S_REGISTER)) continue;
-        if (!(defuse->symbol->type->ts & T_INT)) continue;
-
-        /* looks good, remember it */
-
         defuse->dus |= DU_CON;
         defuse->con = insn->operand[1]->u.con.i;
     }
@@ -436,17 +391,11 @@ con_prop(block)
     test_block = block_successor(block, 0);
     if (test_block->nr_insns != 1) return 0;
     insn = test_block->first_insn;
-    if (insn->opcode != I_TEST) return 0;
-    if (insn->operand[0]->op != E_REG) return 0;
-    if (insn->operand[1]->op != E_REG) return 0;
+    if (!peep_match(test_block, insn, test)) return 0;
     reg = insn->operand[0]->u.reg;
-    if (insn->operand[1]->u.reg != reg) return 0;
     defuse = find_defuse(block, reg, FIND_DEFUSE_NORMAL);
     if (!defuse) return 0;
     if (!(defuse->dus & DU_CON)) return 0;
-
-    /* ok, looks good: let's try to go around test_block
-       by picking the right Z or NZ successor. */
 
     for (i = 0; succ = block_successor(test_block, i); ++i) {
         j = block_successor_cc(test_block, i);
@@ -468,8 +417,7 @@ struct optimizer
     int     level;
     int ( * func ) ();
 } optimizers[] = {
-    { 1, early_subs },    
-    { 1, temp_peep },
+    { 1, peeps },    
     { 1, dead_stores },     
     { 1, con_prop }
 };
@@ -522,7 +470,7 @@ optimize()
 
     if (O_flag) {
         for (block = first_block; block; block = block->next)
-            late_subs(block);
+            late_peeps(block);
     }
 
     allocate_regs();

@@ -78,6 +78,7 @@ extern void output(char * fmt, ...);
 #include "type.h"
 #include "reg.h"
 #include "block.h"
+#include "peep.h"
 
 extern int              g_flag;
 extern int              O_flag;

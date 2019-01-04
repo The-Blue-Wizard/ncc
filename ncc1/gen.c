@@ -246,7 +246,7 @@ operand(tree)
    table. an entry is considered a match when the 'op' is the same and the 
    operands' type bits are "covered" by the corresponding masks. 
    
-   as a special case, an opcode of I_NOP results in no emission at all.
+   as a special case, an opcode of I_NONE results in no emission at all.
    returns non-zero if an instruction was emitted, zero otherwise.
    ownership of 'left' and 'right' trees is given to choose(). */
    
@@ -288,12 +288,12 @@ static struct
     { E_MUL, T_LFLOAT, T_LFLOAT, I_MULSD },
     { E_MUL, T_IS_INTEGRAL | T_PTR, T_IS_INTEGRAL | T_PTR, I_IMUL },
 
-    { E_CAST, T_IS_CHAR, T_IS_CHAR, I_NOP }, 
-    { E_CAST, T_IS_SHORT, T_IS_SHORT, I_NOP },
-    { E_CAST, T_IS_INT, T_IS_INT, I_NOP },
-    { E_CAST, T_IS_LONG | T_PTR, T_IS_LONG | T_PTR, I_NOP },
-    { E_CAST, T_FLOAT, T_FLOAT, I_NOP },
-    { E_CAST, T_LFLOAT, T_LFLOAT, I_NOP },
+    { E_CAST, T_IS_CHAR, T_IS_CHAR, I_NONE }, 
+    { E_CAST, T_IS_SHORT, T_IS_SHORT, I_NONE },
+    { E_CAST, T_IS_INT, T_IS_INT, I_NONE },
+    { E_CAST, T_IS_LONG | T_PTR, T_IS_LONG | T_PTR, I_NONE },
+    { E_CAST, T_FLOAT, T_FLOAT, I_NONE },
+    { E_CAST, T_LFLOAT, T_LFLOAT, I_NONE },
     { E_CAST, T_PTR | T_IS_LONG | T_IS_INT | T_IS_SHORT, T_CHAR, I_MOVSX },  
     { E_CAST, T_PTR | T_IS_LONG | T_IS_INT | T_IS_SHORT, T_UCHAR, I_MOVZX },  
     { E_CAST, T_PTR | T_IS_LONG | T_IS_INT, T_SHORT, I_MOVSX },
@@ -322,7 +322,7 @@ choose(op, left, right)
         if (!(choices[i].left_ts & left->type->ts)) continue;
         if (!(choices[i].right_ts & right->type->ts)) continue;
 
-        if (choices[i].opcode != I_NOP) {
+        if (choices[i].opcode != I_NONE) {
             left = operand(left);
             right = operand(right);
 
