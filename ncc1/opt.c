@@ -177,33 +177,12 @@ peeps(block)
 }
 
 
-/* returns the log base 2 of 'x', or -1 
-   if it's not an integer or "out of range" */
-
-#define LOG2_MAX 30
-
-static
-log_2(x)
-    long x;
-{
-    long i = 1;
-    int  log_2 = 0;
-
-    while (log_2 < LOG2_MAX) {
-        if (x == i) return log_2;
-        i <<= 1;
-        ++log_2;
-    }
-
-    return -1;
-}
-
-/* late peephole optimizations are simple one-for-one substitutions.
-   they aren't processed until the late minute because they have the
-   potential to obscure other optimizations. */
+/* optimizations that are simple one-for-one substitutions.
+   these aren't processed until the last minute because they 
+   have the potential to obscure other optimizations. */
 
 static
-late_peeps(block)
+subs(block)
     struct block * block;
 {
     struct insn * insn;
@@ -256,38 +235,20 @@ late_peeps(block)
             }
         }
 
-#if 0
-        case I_IMUL:
-            /* IMUL <??>, x (power of 2) -> SHL <??>, log2(x) */
-
-            if (    (insn->operand[1]->op == E_CON)
-                &&  ((i = log_2(insn->operand[1]->u.con.i)) != -1)
-                &&  !(insn->flags & INSN_FLAG_CC) )
-            {
-                insn->opcode = I_SHL;
-                insn->operand[1]->u.con.i = i;
-            }
-            
-            break;
-
-        case I_MOV:
-
-            /* MOV <reg>, 0 -> XOR <reg>, <reg> */
-
-            if (    (insn->operand[1]->op == E_CON)
-                &&  (insn->operand[1]->u.con.i == 0)
-                &&  !(insn->operand[1]->type->tts & T_IS_CHAR)
-                &&  ccs_are_dead(block, insn) ) /* XXX: don't have this yet */
-            {
-                insn->opcode = I_XOR;
-                free_tree(insn->operand[1]);
-                insn->operand[1] = copy_tree(insn->operand[0]);
-            }
-            
-            break;
-#endif
-
+        /* easy ones left on the table:
+            IMUL by a constant power of two = SHL
+            MOV <reg>, 0 = XOR <reg>, <reg> */
     }
+}
+
+/* reminder to do a limited local form of register coalescing 
+   to, among other things, clean up the code generator temps */
+
+static
+coalesce(block)
+    struct block * block;
+{  
+    return 0;
 }
 
 /* remove dead code (dead stores): any instruction that
@@ -326,14 +287,10 @@ dead_stores(block)
 }
 
 /* constant propogation. step through the block and track if a register
-   has a known constant value; set DU_CON and 'con' if so. as is typical,
-   the register in question must be unaliased (S_REGISTER).
-
-   we could use this information to replace the register with the
-   constant value in subsequent insns, if we wished, but we don't (yet).
-   for now, we're more interested in eliminating jumps. see end of loop.
-   the function is written to make it easy to add "proper" constant
-   propagation here, once it becomes clear when that is a win. */
+   has a known constant value; use DU_CON and 'con' to track. we should  
+   use this information to replace the register with the constant value 
+   in subsequent insns, but we don't yet. for now, the data is only used
+   to eliminate jumps. see end of loop. */ 
 
 static
 con_prop(block)
@@ -370,14 +327,16 @@ con_prop(block)
             if (defuse) defuse->dus &= ~DU_CON;
         }
 
-        /* if a MOV <reg>, <con> that meets our constraints,
-           then remember its value */
+        if (peep_match(block, insn, mov_con)) {
+            /* a MOV <reg>, <con> .. remember its value */
 
-        if (!peep_match(block, insn, mov_con)) continue;
-        reg = insn->operand[0]->u.reg;
-        defuse = find_defuse(block, reg, FIND_DEFUSE_NORMAL);
-        defuse->dus |= DU_CON;
-        defuse->con = insn->operand[1]->u.con.i;
+            reg = insn->operand[0]->u.reg;
+            defuse = find_defuse(block, reg, FIND_DEFUSE_NORMAL);
+            defuse->dus |= DU_CON;
+            defuse->con = insn->operand[1]->u.con.i;
+        } else {
+            /* propagate constants here! */
+        }
     }
 
     /* look to see if we have exactly one successor whose 
@@ -417,7 +376,8 @@ struct optimizer
     int     level;
     int ( * func ) ();
 } optimizers[] = {
-    { 1, peeps },    
+    { 1, peeps },       /* order needs to be thought out */
+    { 1, coalesce },
     { 1, dead_stores },     
     { 1, con_prop }
 };
@@ -470,7 +430,7 @@ optimize()
 
     if (O_flag) {
         for (block = first_block; block; block = block->next)
-            late_peeps(block);
+            subs(block);
     }
 
     allocate_regs();
