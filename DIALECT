@@ -11,10 +11,6 @@ integral types, including 'char', which is signed by default.
 'struct' and 'union' types each enclose a unique namespace, so members of
 different aggregate types need not have different names. 
 
-* Separate tag namespaces.
-
-'struct foo' and 'union foo' refer to different types, even in the same scope.
-
 * Arbitrarily-typed bitfields.
 
 The compiler allows bit fields to have any integral type: the size of the type 
@@ -22,5 +18,5 @@ limits the number of bits that are permitted and sets the alignment requirement
 of the word that contains field. Also, the signedness of the field is honored.
 
 Charles Youse <charles@gnuless.org>
-January 3, 2019
+January 8, 2019
 

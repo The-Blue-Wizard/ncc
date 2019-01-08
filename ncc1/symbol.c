@@ -95,7 +95,7 @@ literals()
 externs1(symbol)
     struct symbol * symbol;
 {
-    if ((symbol->ss & S_EXTERN) && !(symbol->ss & S_DEFINED) && (symbol->ss & S_REFERENCED))
+    if ((symbol->ss & S_EXTERN) && (symbol->ss & S_REFERENCED))
         output(".global %G\n", symbol);
 }
 
@@ -152,6 +152,8 @@ new_symbol(id, ss, type)
     symbol->align = 0;
     symbol->target = NULL;
     symbol->link = NULL;
+    symbol->input_name = NULL;
+    symbol->line_number = 0;
     symbol->i = 0;
     symbol->list = NULL;
 

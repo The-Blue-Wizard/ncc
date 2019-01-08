@@ -109,6 +109,13 @@ struct string
 
 #define S_ARG           0x00000400
 
+    /* file-scope variable definitions that aren't explicitly
+       initialized are S_TENTATIVE; if we get to the end of 
+       the translation unit without an actual definition for
+       the variable, then we issue one then. */
+
+#define S_TENTATIVE     0x10000000
+
     /* extern variables that appear in inner scopes but have
        not been explicitly declared at file scope are S_LURKERs
        in SCOPE_GLOBAL. they're generally ignored except when
@@ -139,6 +146,12 @@ struct symbol
     int             align;      /* S_TAG only */
     struct block *  target;     /* S_LABEL only */
     struct symbol * link;       /* table bucket link */
+
+    /* when a definition is marked S_TENTATIVE, its location is 
+       remembered here so we can report errors sensibly */
+
+    struct string * input_name;
+    int             line_number;
 
     /* 'i' is vaguely named because it's a general purpose holder.
     

@@ -110,6 +110,24 @@ check_types(type1, type2, mode)
     if (type1 || type2) error(ERROR_INCOMPAT);
 }
 
+/* return true if the type is complete, false otherwise */
+
+complete_type(type)
+    struct type * type;
+{
+    while (type) {
+        if ((type->ts & T_ARRAY) && (type->nr_elements == 0))
+            return 0;
+
+        if ((type->ts & T_TAG) && !(type->tag->ss & S_DEFINED))
+            return 0;
+
+        type = type->next;
+    }
+
+    return 1;
+}
+
 /* return the size or alignment of the type in bytes.
    abort with an error if the value isn't, or can't be, known. */
 

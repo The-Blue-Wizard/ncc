@@ -111,7 +111,9 @@ static char *errors[] =
     "misplaced break, continue or case",    /* ERROR_MISPLACED */
     "dangling goto (undefined label)",      /* ERROR_DANGLING */
     "duplicate case label",                 /* ERROR_DUPCASE */
-    "switch/case expression not integral"   /* ERROR_CASE */
+    "switch/case expression not integral",  /* ERROR_CASE */
+    "tag class mismatch",                   /* ERROR_TAGMATCH */
+    "tentative definition incomplete"       /* ERROR_TENTATIVE */
 };
 
 error(code)
@@ -183,6 +185,7 @@ main(argc, argv)
     yyinit();
     translation_unit();
     literals();
+    tentatives();
     externs();
 
     fclose(output_file);

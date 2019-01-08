@@ -98,10 +98,10 @@ struct_or_union()
     if (token.kk == KK_IDENT) {
         id = token.u.text;
         lex();
-        if (token.kk == KK_LBRACE) 
-            tag = find_symbol(id, ss, current_scope, current_scope);
+        if ((token.kk == KK_LBRACE) || (token.kk == KK_SEMI))
+            tag = find_symbol(id, S_TAG, current_scope, current_scope);
         else
-            tag = find_symbol(id, ss, SCOPE_GLOBAL, current_scope);
+            tag = find_symbol(id, S_TAG, SCOPE_GLOBAL, current_scope);
     } else {
         id = NULL;
         tag = NULL;
@@ -112,6 +112,8 @@ struct_or_union()
         tag = new_symbol(id, ss, NULL);
         put_symbol(tag, current_scope);
     }
+
+    if (!(tag->ss & ss)) error(ERROR_TAGMATCH);
 
     if (token.kk == KK_LBRACE) {
         lex();
@@ -435,8 +437,6 @@ declare_local(ss, id, type)
             symbol = new_symbol(id, S_EXTERN | S_LURKER, copy_type(type));
             put_symbol(symbol, SCOPE_GLOBAL);
         }
-
-        symbol->ss |= S_REFERENCED;
     } 
 
     if (ss == S_NONE) ss = S_LOCAL;

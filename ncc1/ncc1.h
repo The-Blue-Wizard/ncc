@@ -224,4 +224,6 @@ extern struct defuse *  find_defuse_by_symbol();
 #define ERROR_DANGLING      52      /* undefined label */
 #define ERROR_DUPCASE       53      /* duplicate case label */
 #define ERROR_CASE          54      /* switch/case must be integral */
+#define ERROR_TAGMATCH      55      /* tag class mismatch */
+#define ERROR_TENTATIVE     56      /* tentative definition incomplete */
 

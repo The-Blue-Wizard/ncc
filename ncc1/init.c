@@ -223,6 +223,39 @@ initialize(type, outermost)
         error(ERROR_INTERNAL);
 }
 
+/* issue a zero initialization for the given symbol. */
+
+bss(symbol)
+    struct symbol * symbol;
+{
+    output(".bss %G,%d,%d\n", symbol, size_of(symbol->type), align_of(symbol->type));
+    symbol->ss &= ~S_TENTATIVE;
+    symbol->ss |= S_DEFINED;
+}
+
+/* walk the symbol table and convert tentative definitions
+   into actual definitions. */
+
+static
+tentative1(symbol)
+    struct symbol * symbol;
+{
+    if (symbol->ss & S_TENTATIVE) {
+        if (complete_type(symbol->type)) {
+            bss(symbol);
+        } else {
+            input_name = symbol->input_name;
+            line_number = symbol->line_number;
+            error(ERROR_TENTATIVE);
+        }
+    }
+}
+
+tentatives()
+{
+    walk_symbols(SCOPE_GLOBAL, SCOPE_GLOBAL, tentative1);
+}
+
 /* just declared the 'symbol' with the explicit storage class 'ss'.
    (we only care about 'ss' to distinguish between explicit and 
    implicit 'extern'). the job of initializer() is to process an 
@@ -238,12 +271,11 @@ initializer(symbol, ss)
     if (symbol->ss & S_BLOCK) size_of(symbol->type);
 
     if ((symbol->ss & (S_STATIC | S_EXTERN)) && !(ss & S_EXTERN)) {
-        if (symbol->ss & S_DEFINED) error(ERROR_DUPDEF);
         if (symbol->ss & S_STATIC) symbol->i = next_asm_label++;
-        if (symbol->ss & S_EXTERN) output(".global %G\n", symbol);
-        symbol->ss |= S_DEFINED;
+        if (symbol->ss & S_EXTERN) symbol->ss |= S_REFERENCED;
 
         if (token.kk == KK_EQ) {
+            if (symbol->ss & S_DEFINED) error(ERROR_DUPDEF);
             lex();
             saved_block = current_block;    /* don't allow code generation */
             current_block = NULL;
@@ -253,9 +285,17 @@ initializer(symbol, ss)
             output("%G:", symbol);
             initialize(symbol->type, 1);
             symbol->ss |= S_DEFINED;
+            symbol->ss &= ~S_TENTATIVE;
             current_block = saved_block;
-        } else
-            output(".bss %G,%d,%d\n", symbol, size_of(symbol->type), align_of(symbol->type));
+        } else {
+            if (symbol->scope != SCOPE_GLOBAL) 
+                bss(symbol);
+            else if (!(symbol->ss & S_DEFINED)) {
+                symbol->ss |= S_TENTATIVE;
+                symbol->input_name = input_name;
+                symbol->line_number = line_number;
+            }
+        }
     } else {
         if (token.kk == KK_EQ) {
             lex();

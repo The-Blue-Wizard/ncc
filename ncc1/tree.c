@@ -641,7 +641,7 @@ primary_expression()
 
         if (symbol == NULL) {
             if (token.kk == KK_LPAREN) {
-                symbol = new_symbol(id, S_EXTERN | S_LURKER | S_REFERENCED, splice_types(new_type(T_FUNC), new_type(T_INT)));
+                symbol = new_symbol(id, S_EXTERN | S_LURKER, splice_types(new_type(T_FUNC), new_type(T_INT)));
                 put_symbol(symbol, SCOPE_GLOBAL);
             } else
                 error(ERROR_UNKNOWN);
