@@ -84,7 +84,7 @@ static char *errors[] =
     "illegal type for bit field",           /* ERROR_FIELDTY */
     "invalid bit field size",               /* ERROR_FIELDSZ */
     "storage class not permitted",          /* ERROR_SCLASS */
-    "struct/union already defined",         /* ERROR_TAGREDEF */
+    "struct/union/enum already defined",    /* ERROR_TAGREDEF */
     "empty struct/union definition",        /* ERROR_EMPTY */
     "duplicate member declaration",         /* ERROR_REMEMBER */
     "illegal/incompatible redeclaration",   /* ERROR_REDECL */

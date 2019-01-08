@@ -81,17 +81,19 @@ struct string
 
 #define S_STRUCT        0x00000001
 #define S_UNION         0x00000002
+#define S_ENUM          0x00000004
 
     /* tags live in their own namespace */
 
-#define S_TAG           (S_STRUCT | S_UNION)    
+#define S_TAG           (S_STRUCT | S_UNION | S_ENUM)
                         
-#define S_TYPEDEF       0x00000004
-#define S_STATIC        0x00000008
-#define S_EXTERN        0x00000010
-#define S_AUTO          0x00000020
-#define S_REGISTER      0x00000040
-#define S_LOCAL         0x00000080
+#define S_TYPEDEF       0x00000008
+#define S_STATIC        0x00000010
+#define S_EXTERN        0x00000020
+#define S_AUTO          0x00000040
+#define S_REGISTER      0x00000080
+#define S_LOCAL         0x00000100
+#define S_CONST         0x00000200      /* enumeration constants */
 
     /* S_BLOCK is shorthand for all block-level symbols */
 
@@ -99,15 +101,15 @@ struct string
 
     /* S_NORMAL covers all symbols in the "normal" namespace */
 
-#define S_NORMAL        (S_LOCAL | S_REGISTER | S_AUTO | S_TYPEDEF | S_STATIC | S_EXTERN)
+#define S_NORMAL        (S_LOCAL | S_REGISTER | S_AUTO | S_TYPEDEF | S_STATIC | S_EXTERN | S_CONST)
 
-#define S_MEMBER        0x00000100
-#define S_LABEL         0x00000200
+#define S_MEMBER        0x00000400
+#define S_LABEL         0x00000800
 
     /* formal arguments are put in this storage class until 
        their types have been declared in the function header */
 
-#define S_ARG           0x00000400
+#define S_ARG           0x00001000
 
     /* file-scope variable definitions that aren't explicitly
        initialized are S_TENTATIVE; if we get to the end of 
@@ -165,7 +167,9 @@ struct symbol
        (assignments for S_REGISTER might be deferred until spilled.) 
        
        S_STRUCT/S_UNION: when S_DEFINED, the size in in BYTES.
-       When !S_DEFINED, size is a running counter IN BITS. */
+       When !S_DEFINED, size is a running counter IN BITS. 
+
+       S_CONST: the value assigned to the enumeration constant */
 
     int             i;
 

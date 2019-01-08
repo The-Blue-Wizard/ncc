@@ -574,6 +574,7 @@ is_type_specifier()
         /* fall through */
     case KK_STRUCT:
     case KK_UNION:
+    case KK_ENUM:
     case KK_CHAR:
     case KK_SHORT:
     case KK_INT:
@@ -643,11 +644,12 @@ primary_expression()
             if (token.kk == KK_LPAREN) {
                 symbol = new_symbol(id, S_EXTERN | S_LURKER, splice_types(new_type(T_FUNC), new_type(T_INT)));
                 put_symbol(symbol, SCOPE_GLOBAL);
-            } else
+            } else 
                 error(ERROR_UNKNOWN);
         }
 
         if (symbol->ss & S_TYPEDEF) error(ERROR_TYPEDEF);
+        if (symbol->ss & S_CONST) return int_tree(T_INT, (long) symbol->i);
         return symbol_tree(symbol);
 
     case KK_STRLIT:

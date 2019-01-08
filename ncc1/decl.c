@@ -131,6 +131,68 @@ struct_or_union()
     return type;
 }
 
+/* parse an enum specifier. */
+
+static struct type *
+enum_specifier()
+{
+    struct string * id;
+    struct symbol * symbol;
+    int             value;
+
+    lex();
+
+    if (token.kk == KK_IDENT) {
+        id = token.u.text;
+        lex();
+
+        if (token.kk == KK_LBRACE) {
+            if (find_symbol(id, S_TAG, current_scope, current_scope))
+                error(ERROR_TAGREDEF);
+
+            symbol = new_symbol(id, S_ENUM | S_DEFINED, NULL);
+            put_symbol(symbol, current_scope);
+        } else {
+            symbol = find_symbol(id, S_TAG, SCOPE_GLOBAL, current_scope);
+            if (!symbol) error(ERROR_UNKNOWN);
+            if (!(symbol->ss & S_ENUM)) error(ERROR_TAGMATCH);
+        }
+    } else
+        expect(KK_LBRACE);
+
+    if (token.kk == KK_LBRACE) {
+        lex();
+        value = 0;
+
+        for (;;) 
+        {
+            expect(KK_IDENT);
+            id = token.u.text;
+            lex();
+
+            if (find_symbol(id, S_NORMAL, current_scope, current_scope)) error(ERROR_REDECL);
+            symbol = new_symbol(id, S_CONST, NULL);
+
+            if (token.kk == KK_EQ) {
+                lex();
+                value = constant_expression();
+            }
+
+            symbol->i = value++;
+            put_symbol(symbol, current_scope);
+
+            if (token.kk == KK_RBRACE)
+                break;
+            else 
+                match(KK_COMMA);
+        }
+
+        match(KK_RBRACE);
+    }
+
+    return new_type(T_INT);
+}
+
 /* parse type specifier. if 'ss' is not NULL, then also allow
    a storage-class specifier. if no type specifiers at all 
    are encountered, return NULL. 
@@ -163,6 +225,9 @@ type_specifier(ss)
     case KK_STRUCT:
     case KK_UNION:
         return struct_or_union();
+
+    case KK_ENUM:
+        return enum_specifier();
 
     case KK_IDENT:
         symbol = find_typedef(token.u.text);
