@@ -55,9 +55,22 @@ fcon()
     char * endptr;
     int    kk;
 
-    kk = KK_LFCON;
     errno = 0;
-    token.u.f = strtod(yytext, &endptr);
+
+    if (toupper(yych) == 'F') {
+        kk = KK_FCON;
+        token.u.f = strtof(yytext, &endptr);
+        yynext();
+    } else {
+        if (toupper(yych) == 'L') {
+            yynext();
+            kk = KK_LDCON;
+        } else
+            kk = KK_DCON;
+
+        token.u.f = strtod(yytext, &endptr);
+    }
+
     if (errno == ERANGE) error(ERROR_FRANGE);
     if (errno || *endptr) error(ERROR_BADFCON);
     return kk;
@@ -165,12 +178,23 @@ yystash(c)
 /* called by main() after setting 'yyin' but before the first
    call to lex() to initialize the scanner. */
 
-static char * keyword[] =
+static struct
 {
-    "auto", "break", "case", "char", "continue", "default", "do",
-    "double", "else", "extern", "float", "for", "goto", "if", "int", 
-    "long", "register", "return", "short", "sizeof", "static", 
-    "struct", "switch", "typedef", "union", "unsigned", "while"
+    char * yytext;
+    int    kk;
+} keyword[] =
+{
+    { "auto", KK_AUTO }, { "break", KK_BREAK }, { "case", KK_CASE },
+    { "char", KK_CHAR }, { "const", KK_CONST }, { "continue", KK_CONTINUE }, 
+    { "default", KK_DEFAULT }, { "do", KK_DO }, { "double", KK_DOUBLE }, 
+    { "else", KK_ELSE }, { "enum", KK_ENUM }, { "extern", KK_EXTERN }, 
+    { "float", KK_FLOAT }, { "for", KK_FOR }, { "goto", KK_GOTO }, { "if", KK_IF }, 
+    { "int", KK_INT }, { "long", KK_INT }, { "register", KK_REGISTER }, 
+    { "return", KK_RETURN }, { "short", KK_SHORT }, { "signed", KK_SIGNED },
+    { "sizeof", KK_SIZEOF }, { "static", KK_STATIC }, { "struct", KK_STRUCT }, 
+    { "switch", KK_SWITCH }, { "typedef", KK_TYPEDEF }, { "union", KK_UNION }, 
+    { "unsigned", KK_UNSIGNED }, { "void", KK_VOID }, { "volatile", KK_VOLATILE },
+    { "while", KK_WHILE }
 };
 
 #define NR_KEYWORDS (sizeof(keyword)/sizeof(*keyword))
@@ -181,8 +205,8 @@ yyinit()
     int             i;
 
     for (i = 0; i < NR_KEYWORDS; ++i) {
-        k = stringize(keyword[i], strlen(keyword[i]));
-        k->token = KK_AUTO + i;
+        k = stringize(keyword[i].yytext, strlen(keyword[i].yytext));
+        k->token = keyword[i].kk;
     }
 
     yynext();
@@ -202,12 +226,36 @@ icon()
     value = strtoul(yytext, &endptr, 0);
     if (errno == ERANGE) error(ERROR_IRANGE);
 
-    if (toupper(yych) != 'L') {
-        if ((*yytext != '0') && (value > INT_MAX)) kk = KK_LCON;
-        if ((*yytext == '0') && (value > UINT_MAX)) kk = KK_LCON;
-    } else {
-        yynext();   /* eat 'L' */
+    if (toupper(yych) == 'L') {
         kk = KK_LCON;
+        yynext();
+        if (toupper(yych) == 'U') {
+            yynext();
+            kk = KK_ULCON;
+        } else {
+            if (value > LONG_MAX) 
+                kk = KK_ULCON;
+        }
+    } else if (toupper(yych) == 'U') {
+        kk = KK_UCON;
+        yynext();
+        if (toupper(yych) == 'L') {
+            yynext();
+            kk = KK_ULCON;
+        } else {
+            if (value > UINT_MAX)
+                kk = KK_ULCON;
+        }
+    } else { /* unsuffixed */
+        if (value > INT_MAX) {
+            if (*yytext == '0') 
+                kk = KK_UCON;
+            else
+                kk = KK_LCON;
+        }
+
+        if (value > UINT_MAX) kk = KK_LCON;
+        if (value > LONG_MAX) kk = KK_ULCON;
     }
 
     if (errno || *endptr) error(ERROR_BADICON);

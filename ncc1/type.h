@@ -46,13 +46,14 @@ struct type
 #define T_LONG      0x00000040
 #define T_ULONG     0x00000080
 #define T_FLOAT     0x00000100
-#define T_LFLOAT    0x00000200
-#define T_TAG       0x00000400      /* struct/union 'u.tag' */
-#define T_ARRAY     0x00000800      /* array[nr_elements] of ... */
-#define T_PTR       0x00001000      /* ptr to ... */
-#define T_FUNC      0x00002000      /* function returning ... */
+#define T_DOUBLE    0x00000200
+#define T_LDOUBLE   0x00000400
+#define T_TAG       0x00000800      /* struct/union 'u.tag' */
+#define T_ARRAY     0x00001000      /* array[nr_elements] of ... */
+#define T_PTR       0x00002000      /* ptr to ... */
+#define T_FUNC      0x00004000      /* function returning ... */
 
-#define T_BASE      0x00002FFF      /* bits that must be exclusive */
+#define T_BASE      0x00007FFF      /* bits that must be exclusive */
 
 /* bit fields must have one of the integral T_* bits set, as well as T_FIELD.
    the size and shift are then encoded using the macros below. these types
@@ -72,7 +73,7 @@ struct type
 #define T_IS_SHORT      (T_SHORT | T_USHORT)
 #define T_IS_INT        (T_INT | T_UINT)
 #define T_IS_LONG       (T_LONG | T_ULONG)
-#define T_IS_FLOAT      (T_FLOAT | T_LFLOAT)
+#define T_IS_FLOAT      (T_FLOAT | T_DOUBLE | T_LDOUBLE)
 
 #define T_IS_SIGNED     (T_CHAR | T_SHORT | T_INT | T_LONG)
 #define T_IS_UNSIGNED   (T_UCHAR | T_USHORT | T_UINT | T_ULONG)
@@ -84,5 +85,5 @@ struct type
 #define T_IS_BYTE       T_IS_CHAR
 #define T_IS_WORD       T_IS_SHORT
 #define T_IS_DWORD      (T_IS_INT | T_FLOAT)
-#define T_IS_QWORD      (T_IS_LONG | T_PTR | T_LFLOAT)
+#define T_IS_QWORD      (T_IS_LONG | T_PTR | T_DOUBLE | T_LDOUBLE)
 

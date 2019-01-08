@@ -232,7 +232,7 @@ spill(block, defuse, before, dir)
     reg = reg_tree(defuse->reg, copy_type(memory->type));
     opcode = I_MOV;
     if (reg->type->ts & T_FLOAT) opcode = I_MOVSS;
-    if (reg->type->ts & T_LFLOAT) opcode = I_MOVSD;
+    if (reg->type->ts & T_DOUBLE) opcode = I_MOVSD;
 
     if (dir == SPILL_IN) 
         insn = new_insn(opcode, reg, memory);

@@ -37,7 +37,7 @@ float_literal(tree)
     symbol->i = next_asm_label++;
     put_symbol(symbol, SCOPE_RETIRED);
     segment(SEGMENT_TEXT);
-    output("%G: %s %O\n", symbol, (tree->type->ts & T_LFLOAT) ? ".qword" : ".dword", tree);
+    output("%G: %s %O\n", symbol, (tree->type->ts & T_DOUBLE) ? ".qword" : ".dword", tree);
     free_tree(tree);
     return memory_tree(symbol);
 }

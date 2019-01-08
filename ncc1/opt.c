@@ -114,7 +114,7 @@ logues()
 
     for (i = 0; i < NR_REGS; i++) {
         if (save_fregs & (1 << i)) {
-            tmp = temporary_symbol(new_type(T_LFLOAT));
+            tmp = temporary_symbol(new_type(T_DOUBLE));
             floats[i] = memory_tree(tmp);
         } else
             floats[i] = NULL;
@@ -135,7 +135,7 @@ logues()
         }
 
         if (save_fregs & (1 << i)) {
-            reg = reg_tree(R_XMM0 + i, new_type(T_LFLOAT));
+            reg = reg_tree(R_XMM0 + i, new_type(T_DOUBLE));
             put_insn(entry_block, new_insn(I_MOVSD, copy_tree(floats[i]), copy_tree(reg)), NULL);
             put_insn(exit_block, new_insn(I_MOVSD, reg, floats[i]), exit_block->first_insn);
         }

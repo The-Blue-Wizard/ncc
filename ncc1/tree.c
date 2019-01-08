@@ -303,9 +303,8 @@ lvalue(tree)
 /* perform standard promotions on a tree. this is called in most
    circumstances before a tree is used as an operand. it will:
    1. convert all char or short to int,
-   2. convert all float to double,
-   3. convert array into rvalue pointer to its first element,
-   4. convert function to pointer-to-function. */
+   2. convert array into rvalue pointer to its first element,
+   3. convert function to pointer-to-function. */
 
 static struct tree *
 promote(tree)
@@ -315,9 +314,6 @@ promote(tree)
 
     if (tree->type->ts & (T_IS_CHAR | T_IS_SHORT))
         return new_tree(E_CAST, new_type(T_INT), tree);
-
-    if (tree->type->ts & T_FLOAT)
-        return new_tree(E_CAST, new_type(T_LFLOAT), tree);
 
     if (tree->type->ts & T_FUNC) return addr_tree(tree);
 
@@ -358,7 +354,7 @@ usuals(tree)
     int           ts;
 
     if ((left->type->ts & T_IS_ARITH) && (right->type->ts & T_IS_ARITH)) {
-        for (ts = T_LFLOAT; ts != T_INT; ts >>= 1) {
+        for (ts = T_LDOUBLE; ts != T_INT; ts >>= 1) {
             if ((left->type->ts & ts) || (right->type->ts & ts))
                 break;
         }
@@ -660,9 +656,12 @@ primary_expression()
         return symbol_tree(symbol);
 
     case KK_ICON:   tree = int_tree(T_INT, token.u.i); lex(); return tree;
+    case KK_UCON:   tree = int_tree(T_UINT, token.u.i); lex(); return tree;
     case KK_LCON:   tree = int_tree(T_LONG, token.u.i); lex(); return tree;
+    case KK_ULCON:  tree = int_tree(T_ULONG, token.u.i); lex(); return tree;
     case KK_FCON:   tree = float_tree(T_FLOAT, token.u.f); lex(); return tree;
-    case KK_LFCON:  tree = float_tree(T_LFLOAT, token.u.f); lex(); return tree;
+    case KK_DCON:   tree = float_tree(T_DOUBLE, token.u.f); lex(); return tree;
+    case KK_LDCON:  tree = float_tree(T_LDOUBLE, token.u.f); lex(); return tree;
 
     default:
         error(ERROR_SYNTAX);
@@ -713,6 +712,10 @@ call_expression(tree)
     while (token.kk != KK_RPAREN) {
         argument = assignment_expression(NULL);
         argument = promote(argument);
+
+        if (argument->type->ts & T_FLOAT)
+            argument = new_tree(E_CAST, new_type(T_DOUBLE), argument);
+
         if (argument->type->ts & T_TAG) error(ERROR_STRUCT);
         argument->list = tree->u.ch[1];
         tree->u.ch[1] = argument;
@@ -1024,7 +1027,7 @@ debug_tree(tree)
             if (tree->type->ts & T_IS_INTEGRAL)
                 fprintf(stderr, "=0x%lX", tree->u.con.i);
             else
-                fprintf(stderr, "=%lf", tree->u.con.f);
+                fprintf(stderr, "=%f", tree->u.con.f);
 
             break;
 

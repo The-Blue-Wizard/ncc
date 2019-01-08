@@ -119,13 +119,13 @@ size_of(type)
     long size = 1;
 
     while (type) {
-        if (type->ts & (T_CHAR | T_UCHAR)) 
+        if (type->ts & T_IS_BYTE) 
             /* size *= 1 */ ;
-        else if (type->ts & (T_SHORT | T_USHORT)) 
+        else if (type->ts & T_IS_WORD) 
             size *= 2;
-        else if (type->ts & (T_INT | T_UINT | T_FLOAT)) 
+        else if (type->ts & T_IS_DWORD) 
             size *= 4;
-        else if (type->ts & (T_LONG | T_ULONG | T_LFLOAT | T_PTR))
+        else if (type->ts & T_IS_QWORD)
             size *= 8;
         else if (type->ts & T_FUNC)
             error(ERROR_ILLFUNC);
@@ -157,13 +157,13 @@ align_of(type)
     while (type) {
         if (type->ts & T_ARRAY)
             /* */ ;
-        else if (type->ts & (T_CHAR | T_UCHAR)) 
+        else if (type->ts & T_IS_BYTE) 
             align = 1;
-        else if (type->ts & (T_SHORT | T_USHORT)) 
+        else if (type->ts & T_IS_WORD) 
             align = 2;
-        else if (type->ts & (T_INT | T_UINT | T_FLOAT)) 
+        else if (type->ts & T_IS_DWORD) 
             align = 4;
-        else if (type->ts & (T_LONG | T_ULONG | T_LFLOAT | T_PTR))
+        else if (type->ts & T_IS_QWORD)
             align = 8;
         else if (type->ts & T_FUNC)
             error(ERROR_ILLFUNC);
@@ -222,7 +222,7 @@ argument_type(type)
 
     if (type->ts & T_FUNC) type = splice_types(new_type(T_PTR), type);
     if (type->ts & T_TAG) error(ERROR_STRUCT);
-    if (type->ts & T_FLOAT) type->ts = T_LFLOAT;
+    if (type->ts & T_FLOAT) type->ts = T_DOUBLE;
 
     return type;
 }
@@ -243,7 +243,7 @@ static struct
     { T_LONG, "long" },
     { T_ULONG, "unsigned long" },
     { T_FLOAT, "float" },
-    { T_LFLOAT, "long float" },
+    { T_DOUBLE, "double" },
     { T_PTR, "pointer to " },
     { T_FUNC, "function returning " },
     { T_ARRAY, "array[" }
