@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wno-implicit-int -Wno-implicit-function-declaration -g
 
-all:: ncc nld nobj
+all:: ncc nld nobj nexec
 	make CC="$(CC)" CFLAGS="$(CFLAGS)" -C ncpp 
 	make CC="$(CC)" CFLAGS="$(CFLAGS)" -C ncc1
 	make CC="$(CC)" CFLAGS="$(CFLAGS)" -C nas
@@ -9,10 +9,11 @@ all:: ncc nld nobj
 ncc: ncc.c
 nld: nld.c
 nobj: nobj.c
+nexec: nexec.c
 
 install:: all
 	mkdir -p ~/bin
-	cp ncc nld nobj ncpp/ncpp ncc1/ncc1 nas/nas ~/bin
+	cp ncc nld nobj nexec ncpp/ncpp ncc1/ncc1 nas/nas ~/bin
 
 clean::
 	rm -f nld ncc nobj

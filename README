@@ -22,9 +22,9 @@ ncc1: the C compiler proper, produces assembly output
 nas: accepts 16/32/64-bit Intel syntax assembly and produces .o object.
 nld: the object linker - combines .o files into a.out executables.
 nobj: object/executable inspector. 
+nexec: tool to run ncc a.out binaries on 64-bit Intel/AMD Linux systems
 
 These are all original works and are BSD-licensed. See LICENSE and comments.
 
 Charles Youse <charles@gnuless.org>
-December 27, 2018
-
+January 8, 2019
