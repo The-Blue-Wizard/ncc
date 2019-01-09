@@ -436,7 +436,7 @@ check_operand_types(op, left, right)
     struct type * right;
 {
     if ((op != E_LOR) && (op != E_LAND) && (left->ts & right->ts & T_PTR))
-        check_types(left, right, 0);
+        compat_types(left, right, 0);
 
     switch (op)
     {   

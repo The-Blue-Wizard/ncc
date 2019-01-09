@@ -24,6 +24,50 @@
 
 #include "ncc1.h"
 
+/* parse type qualifiers, updating the ts bitset. */
+
+static
+qualifiers(ts)
+    int * ts;
+{
+    int t;
+
+    for (;;)
+    {
+        t = 0;
+
+        switch (token.kk)
+        {
+        case KK_CONST:      t = T_CONST; break;
+        case KK_VOLATILE:   t = T_VOLATILE; break;
+        }
+
+        if (t) {
+            if (*ts & t) error(ERROR_DUPQUAL);
+            *ts |= t;
+            lex();
+        } else
+            break;
+    }
+}
+
+static
+storage_class()
+{
+    int ss = S_NONE;
+
+    switch (token.kk) {
+    case KK_AUTO:       ss = S_AUTO; break;
+    case KK_REGISTER:   ss = S_REGISTER; break;
+    case KK_EXTERN:     ss = S_EXTERN; break;
+    case KK_STATIC:     ss = S_STATIC; break;
+    case KK_TYPEDEF:    ss = S_TYPEDEF; break;
+    }
+
+    if (ss) lex();
+    return ss;
+}
+
 /* handle struct/union type specifiers. note that, unlike K&R, 
    struct tags are distinct from union tags, and each struct/union
    constitutes an independent namespace for its members. */
@@ -193,6 +237,46 @@ enum_specifier()
     return new_type(T_INT);
 }
 
+/* map a KK_TS_* bitset to a type, or error out. */
+
+static struct
+{
+    int kk_ts;
+    int t;
+} type_map[] = {
+    { KK_TS_INT,                                    T_INT },
+    { KK_TS_UNSIGNED,                               T_UINT },
+    { KK_TS_UNSIGNED | KK_TS_UNSIGNED,              T_UINT },
+    { KK_TS_UNSIGNED | KK_TS_CHAR,                  T_UCHAR },
+    { KK_TS_CHAR,                                   T_CHAR },
+    { KK_TS_UNSIGNED | KK_TS_CHAR,                  T_UCHAR },
+    { KK_TS_SHORT,                                  T_SHORT },
+    { KK_TS_SHORT | KK_TS_INT,                      T_SHORT },
+    { KK_TS_UNSIGNED | KK_TS_SHORT,                 T_USHORT },
+    { KK_TS_UNSIGNED | KK_TS_SHORT | KK_TS_INT,     T_USHORT },
+    { KK_TS_LONG,                                   T_LONG },
+    { KK_TS_LONG | KK_TS_INT,                       T_LONG },
+    { KK_TS_UNSIGNED | KK_TS_LONG,                  T_ULONG },
+    { KK_TS_UNSIGNED | KK_TS_LONG | KK_TS_INT,      T_ULONG },
+    { KK_TS_FLOAT,                                  T_FLOAT },
+    { KK_TS_DOUBLE,                                 T_DOUBLE },
+    { KK_TS_LONG | KK_TS_DOUBLE,                    T_LDOUBLE }
+};
+
+#define NR_TYPE_MAP (sizeof(type_map)/sizeof(*type_map))
+
+static struct type * 
+map_type(int kk_ts)
+{
+    int i;
+
+    for (i = 0; i < NR_TYPE_MAP; ++i) 
+        if (type_map[i].kk_ts == kk_ts)
+            return new_type(type_map[i].t);
+
+    error(ERROR_ILLTYPE);
+}
+
 /* parse type specifier. if 'ss' is not NULL, then also allow
    a storage-class specifier. if no type specifiers at all 
    are encountered, return NULL. 
@@ -206,78 +290,84 @@ type_specifier(ss)
     int * ss;
 {
     struct symbol * symbol;
+    struct type   * type = NULL;
+    int             kk_ts = 0;
+    int             qual_ts = 0;
+    struct type   * tmp;
 
-    if (ss) {
-        *ss = S_NONE;
+    if (ss) *ss = S_NONE;
 
-        switch (token.kk) {
-        case KK_AUTO:       *ss = S_AUTO; break;
-        case KK_REGISTER:   *ss = S_REGISTER; break;
-        case KK_EXTERN:     *ss = S_EXTERN; break;
-        case KK_STATIC:     *ss = S_STATIC; break;
-        case KK_TYPEDEF:    *ss = S_TYPEDEF; break;
+    for (;;)
+    {
+        switch (token.kk)
+        {
+        case KK_AUTO:
+        case KK_REGISTER:
+        case KK_EXTERN:
+        case KK_STATIC:
+        case KK_TYPEDEF:
+            if (!ss) error(ERROR_SCLASS);
+            if (*ss != S_NONE) error(ERROR_DUPCLASS);
+            *ss = storage_class();
+            break;
+
+        case KK_CONST:
+        case KK_VOLATILE:
+            qualifiers(&qual_ts);
+            break;
+
+        case KK_STRUCT:
+        case KK_UNION:
+        case KK_ENUM:
+            if (type) error(ERROR_ILLTYPE);
+            type = (token.kk == KK_ENUM) ? enum_specifier() : struct_or_union();
+            break;
+
+        case KK_SIGNED:
+        case KK_VOID:
+        case KK_UNSIGNED:
+        case KK_SHORT:
+        case KK_LONG:
+        case KK_INT: 
+        case KK_FLOAT: 
+        case KK_DOUBLE:
+        case KK_CHAR: 
+            if ((token.kk & KK_TS_MASK) & kk_ts) error(ERROR_DUPSPEC);
+            kk_ts |= token.kk & KK_TS_MASK;
+            lex();
+            break;
+
+        case KK_IDENT:
+            if (!type) {
+                symbol = find_typedef(token.u.text);
+
+                if (symbol) {
+                    lex();
+                    type = copy_type(symbol->type);
+                    break;
+                }
+            }
+            /* otherwise fall through */
+        default:
+            if (kk_ts && type) error(ERROR_ILLTYPE);
+            if (kk_ts) type = map_type(kk_ts);
+
+            if (!type) {
+                if (!(ss && *ss) && !qual_ts) 
+                    return NULL;
+                else
+                    type = new_type(T_INT);
+            }
+
+            if (qual_ts) {  /* apply to array elements */
+                tmp = type;
+                while (tmp->ts & T_ARRAY) tmp = tmp->next;
+                tmp->ts |= qual_ts;
+            }
+
+            return type;
         }
-
-        if (*ss != S_NONE) lex();
     }
-
-    switch (token.kk) {
-    case KK_STRUCT:
-    case KK_UNION:
-        return struct_or_union();
-
-    case KK_ENUM:
-        return enum_specifier();
-
-    case KK_IDENT:
-        symbol = find_typedef(token.u.text);
-        if (symbol) {
-            lex();
-            return copy_type(symbol->type);
-        }
-        break;
-
-    case KK_UNSIGNED:
-        lex();
-        if (token.kk == KK_SHORT) {
-            lex();
-            if (token.kk == KK_INT) lex();
-            return new_type(T_USHORT);
-        } else if (token.kk == KK_LONG) {
-            lex();
-            if (token.kk == KK_INT) lex();
-            return new_type(T_ULONG);
-        } else if (token.kk == KK_CHAR) {
-            lex();
-            return new_type(T_UCHAR);
-        }
-        if (token.kk == KK_INT) lex();
-        return new_type(T_UINT);
-    
-    case KK_SHORT:
-        lex();
-        if (token.kk == KK_INT) lex();
-        return new_type(T_SHORT);
-
-    case KK_LONG:
-        lex();
-        if (token.kk == KK_FLOAT) {
-            lex();
-            return new_type(T_DOUBLE);
-        }
-        if (token.kk == KK_INT) lex();
-        return new_type(T_LONG);
-
-    case KK_INT: lex(); return new_type(T_INT);
-    case KK_FLOAT: lex(); return new_type(T_FLOAT);
-    case KK_DOUBLE: lex(); return new_type(T_DOUBLE);
-    case KK_CHAR: lex(); return new_type(T_CHAR);
-    }
-
-    if (!(ss && *ss)) 
-        return NULL;
-    else
-        return new_type(T_INT);
 }
 
 /* these three functions parse a declarator - declarator() is the entry.
@@ -301,10 +391,12 @@ declarator(id, args)
     struct symbol ** args;
 {
     struct type * type;
+    int           t_quals = 0;
 
     if (token.kk == KK_STAR) {
         lex();
-        type = splice_types(declarator(id, args), new_type(T_PTR));
+        qualifiers(&t_quals);
+        type = splice_types(declarator(id, args), new_type(T_PTR | t_quals));
     } else
         type = direct_declarator(id, args);
 
@@ -497,7 +589,7 @@ declare_local(ss, id, type)
         symbol = find_symbol(id, S_EXTERN | S_LURKER, SCOPE_GLOBAL, SCOPE_GLOBAL);
 
         if (symbol)
-            check_types(symbol->type, type, 0);
+            compat_types(symbol->type, type, 0);
         else {
             symbol = new_symbol(id, S_EXTERN | S_LURKER, copy_type(type));
             put_symbol(symbol, SCOPE_GLOBAL);
@@ -603,7 +695,7 @@ declare_global(ss, id, type, args)
 
     if (symbol) {
         if (symbol->ss & effective_ss & (S_EXTERN | S_STATIC)) {
-            check_types(symbol->type, type, CHECK_TYPES_COMPOSE);
+            compat_types(symbol->type, type, COMPAT_TYPES_COMPOSE | COMPAT_TYPES_QUALS);
             free_type(type);
         } else
             error(ERROR_REDECL);
@@ -621,6 +713,9 @@ declare_global(ss, id, type, args)
         }
     } else
         initializer(symbol, ss);
+
+    debug_type(symbol->type);
+    fputc('\n', stderr);
 
     return 0;
 }

@@ -189,7 +189,7 @@ static struct
     { "default", KK_DEFAULT }, { "do", KK_DO }, { "double", KK_DOUBLE }, 
     { "else", KK_ELSE }, { "enum", KK_ENUM }, { "extern", KK_EXTERN }, 
     { "float", KK_FLOAT }, { "for", KK_FOR }, { "goto", KK_GOTO }, { "if", KK_IF }, 
-    { "int", KK_INT }, { "long", KK_INT }, { "register", KK_REGISTER }, 
+    { "int", KK_INT }, { "long", KK_LONG }, { "register", KK_REGISTER }, 
     { "return", KK_RETURN }, { "short", KK_SHORT }, { "signed", KK_SIGNED },
     { "sizeof", KK_SIZEOF }, { "static", KK_STATIC }, { "struct", KK_STRUCT }, 
     { "switch", KK_SWITCH }, { "typedef", KK_TYPEDEF }, { "union", KK_UNION }, 

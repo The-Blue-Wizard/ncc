@@ -66,15 +66,15 @@ struct token
 #define KK_PREC_LAND            8
 #define KK_PREC_LOR             9 
 
-#define KK_TS_VOID              0
-#define KK_TS_CHAR              1
-#define KK_TS_SHORT             2
-#define KK_TS_INT               3
-#define KK_TS_LONG              4
-#define KK_TS_SIGNED            5
-#define KK_TS_UNSIGNED          6
-#define KK_TS_FLOAT             7
-#define KK_TS_DOUBLE            8 
+#define KK_TS_VOID              KK_TS(0)
+#define KK_TS_CHAR              KK_TS(1)
+#define KK_TS_SHORT             KK_TS(2)
+#define KK_TS_INT               KK_TS(3)
+#define KK_TS_LONG              KK_TS(4)
+#define KK_TS_SIGNED            KK_TS(5)
+#define KK_TS_UNSIGNED          KK_TS(6)
+#define KK_TS_FLOAT             KK_TS(7)
+#define KK_TS_DOUBLE            KK_TS(8)
 
 #define KK_NONE                 0
 
@@ -140,33 +140,33 @@ struct token
 #define KK_AUTO                 70          /* keywords */
 #define KK_BREAK                71      
 #define KK_CASE                 72
-#define KK_CHAR                 (73 | KK_TS(KK_TS_CHAR))
+#define KK_CHAR                 (73 | KK_TS_CHAR)
 #define KK_CONST                74
 #define KK_CONTINUE             75
 #define KK_DEFAULT              76
 #define KK_DO                   77
-#define KK_DOUBLE               (78 | KK_TS(KK_TS_DOUBLE))
+#define KK_DOUBLE               (78 | KK_TS_DOUBLE)
 #define KK_ELSE                 79
 #define KK_ENUM                 80
 #define KK_EXTERN               81
-#define KK_FLOAT                (82 | KK_TS(KK_TS_FLOAT))
+#define KK_FLOAT                (82 | KK_TS_FLOAT)
 #define KK_FOR                  83
 #define KK_GOTO                 84
 #define KK_IF                   85
-#define KK_INT                  (86 | KK_TS(KK_TS_INT))
-#define KK_LONG                 (87 | KK_TS(KK_TS_LONG))
+#define KK_INT                  (86 | KK_TS_INT)
+#define KK_LONG                 (87 | KK_TS_LONG)
 #define KK_REGISTER             88
 #define KK_RETURN               89
-#define KK_SHORT                (90 | KK_TS(KK_TS_SHORT))
-#define KK_SIGNED               (91 | KK_TS(KK_TS_SIGNED))
+#define KK_SHORT                (90 | KK_TS_SHORT)
+#define KK_SIGNED               (91 | KK_TS_SIGNED)
 #define KK_SIZEOF               92
 #define KK_STATIC               93
 #define KK_STRUCT               94
 #define KK_SWITCH               95
 #define KK_TYPEDEF              96
 #define KK_UNION                97
-#define KK_UNSIGNED             (98 | KK_TS(KK_TS_UNSIGNED))
-#define KK_VOID                 (99 | KK_TS(KK_TS_VOID))
+#define KK_UNSIGNED             (98 | KK_TS_UNSIGNED)
+#define KK_VOID                 (99 | KK_TS_VOID)
 #define KK_VOLATILE             100
 #define KK_WHILE                101
 

@@ -113,7 +113,11 @@ static char *errors[] =
     "duplicate case label",                 /* ERROR_DUPCASE */
     "switch/case expression not integral",  /* ERROR_CASE */
     "tag class mismatch",                   /* ERROR_TAGMATCH */
-    "tentative definition incomplete"       /* ERROR_TENTATIVE */
+    "tentative definition incomplete",      /* ERROR_TENTATIVE */
+    "duplicate type qualifier",             /* ERROR_DUPQUAL */
+    "duplicate storage class",              /* ERROR_DUPCLASS */
+    "duplicate type specifier",             /* ERROR_DUPSPEC */
+    "illegal type specification"            /* ERROR_ILLTYPE */
 };
 
 error(code)

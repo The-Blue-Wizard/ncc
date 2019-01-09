@@ -158,9 +158,10 @@ extern struct defuse *  find_defuse_by_symbol();
 #define DECLARATIONS_INTS       0x00000002 
 #define DECLARATIONS_FIELDS     0x00000004
 
-/* flags for check_types() */
+/* flags for compat_types() */
 
-#define CHECK_TYPES_COMPOSE     0x00000001
+#define COMPAT_TYPES_COMPOSE    0x00000001
+#define COMPAT_TYPES_QUALS      0x00000002
 
 /* output segments */
 
@@ -226,4 +227,8 @@ extern struct defuse *  find_defuse_by_symbol();
 #define ERROR_CASE          54      /* switch/case must be integral */
 #define ERROR_TAGMATCH      55      /* tag class mismatch */
 #define ERROR_TENTATIVE     56      /* tentative definition incomplete */
+#define ERROR_DUPQUAL       57      /* duplicate type qualifier */
+#define ERROR_DUPCLASS      58      /* duplicate storage class */
+#define ERROR_DUPSPEC       59      /* duplicate type specifier */
+#define ERROR_ILLTYPE       60      /* illegal type specification */
 

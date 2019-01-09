@@ -37,23 +37,33 @@ struct type
    these types are also ordered to make the usual arithmetic conversions easy -
    see usuals() in tree.c */
 
-#define T_CHAR      0x00000001      
-#define T_UCHAR     0x00000002
-#define T_SHORT     0x00000004
-#define T_USHORT    0x00000008
-#define T_INT       0x00000010
-#define T_UINT      0x00000020
-#define T_LONG      0x00000040
-#define T_ULONG     0x00000080
-#define T_FLOAT     0x00000100
-#define T_DOUBLE    0x00000200
-#define T_LDOUBLE   0x00000400
-#define T_TAG       0x00000800      /* struct/union 'u.tag' */
-#define T_ARRAY     0x00001000      /* array[nr_elements] of ... */
-#define T_PTR       0x00002000      /* ptr to ... */
-#define T_FUNC      0x00004000      /* function returning ... */
+#define T_VOID      0x00000001
+#define T_CHAR      0x00000002      
+#define T_UCHAR     0x00000004
+#define T_SCHAR     0x00000008
+#define T_SHORT     0x00000010
+#define T_USHORT    0x00000020
+#define T_INT       0x00000040
+#define T_UINT      0x00000080
+#define T_LONG      0x00000100
+#define T_ULONG     0x00000200
+#define T_FLOAT     0x00000400
+#define T_DOUBLE    0x00000800
+#define T_LDOUBLE   0x00001000
+#define T_TAG       0x00002000      /* struct/union 'u.tag' */
+#define T_ARRAY     0x00004000      /* array[nr_elements] of ... */
+#define T_PTR       0x00008000      /* ptr to ... */
+#define T_FUNC      0x00010000      /* function returning ... */
 
-#define T_BASE      0x00007FFF      /* bits that must be exclusive */
+#define T_BASE      0x0001FFFF      /* bits that must be exclusive */
+
+/* qualifiers aren't mutually exclusive and can be combined
+   with everything except array and function types */
+
+#define T_CONST     0x00020000
+#define T_VOLATILE  0x00040000
+
+#define T_QUAL_MASK     (T_CONST | T_VOLATILE)
 
 /* bit fields must have one of the integral T_* bits set, as well as T_FIELD.
    the size and shift are then encoded using the macros below. these types
@@ -62,14 +72,14 @@ struct type
 
 #define T_FIELD                 0x80000000
 
-#define T_GET_SIZE(ts)          (((ts) & 0x3F000000) >> 24)
-#define T_SET_SIZE(ts, bits)    ((ts) |= (((bits) & 0x3F) << 24))
-#define T_GET_SHIFT(ts)         (((ts) & 0x003F0000) >> 16)
-#define T_SET_SHIFT(ts, bits)   ((ts) |= (((bits) & 0x3F) << 16))
+#define T_GET_SIZE(ts)          (((ts) >> 25) & 0x3F)
+#define T_SET_SIZE(ts, bits)    ((ts) |= (((bits) & 0x3F) << 25))
+#define T_GET_SHIFT(ts)         (((ts) >> 19) & 0x3F)
+#define T_SET_SHIFT(ts, bits)   ((ts) |= (((bits) & 0x3F) << 19))
 
 /* useful sets of types */
 
-#define T_IS_CHAR       (T_CHAR | T_UCHAR)
+#define T_IS_CHAR       (T_CHAR | T_UCHAR | T_SCHAR)
 #define T_IS_SHORT      (T_SHORT | T_USHORT)
 #define T_IS_INT        (T_INT | T_UINT)
 #define T_IS_LONG       (T_LONG | T_ULONG)

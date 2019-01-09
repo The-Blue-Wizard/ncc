@@ -91,10 +91,12 @@ splice_types(type1, type2)
     return type1;
 }
 
-/* check for compatibility between two types. and merge any 
-   additional information from 'type2' into 'type1'. */
+/* check for compatibility between two types.
 
-check_types(type1, type2, mode)
+   if COMPAT_TYPES_COMPOSE is specified, additional type
+   information from 'type2' is merged into 'type1'. */
+
+compat_types(type1, type2, flags)
     struct type * type1;
     struct type * type2;
 {
@@ -102,7 +104,8 @@ check_types(type1, type2, mode)
         if ((type1->ts & T_BASE) != (type2->ts & T_BASE)) break;
         if (type1->tag != type2->tag) break;
         if ((type1->nr_elements && type2->nr_elements) && (type1->nr_elements != type2->nr_elements)) break;
-        if ((mode == CHECK_TYPES_COMPOSE) && (type2->nr_elements)) type1->nr_elements = type2->nr_elements;
+        if ((flags & COMPAT_TYPES_COMPOSE) && (type2->nr_elements)) type1->nr_elements = type2->nr_elements;
+        if ((flags & COMPAT_TYPES_QUALS) && ((type1->ts & T_QUAL_MASK) != (type2->ts & T_QUAL_MASK))) break;
         type1 = type1->next;
         type2 = type2->next;
     }
@@ -252,8 +255,12 @@ static struct
     int ts;
     char *text;
 } ts[] = {
+    { T_CONST, "const " },
+    { T_VOLATILE, "volatile " },
+    { T_VOID, "void" },
     { T_CHAR, "char" },
     { T_UCHAR, "unsigned char" },
+    { T_SCHAR, "signed char" },
     { T_SHORT, "short" },
     { T_USHORT, "unsigned short" },
     { T_INT, "int" },
@@ -262,6 +269,7 @@ static struct
     { T_ULONG, "unsigned long" },
     { T_FLOAT, "float" },
     { T_DOUBLE, "double" },
+    { T_LDOUBLE, "long double" },
     { T_PTR, "pointer to " },
     { T_FUNC, "function returning " },
     { T_ARRAY, "array[" }
