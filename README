@@ -1,18 +1,12 @@
 This is NCC, the "new" C compiler. It targets the AMD64 architecture.
 
-The dialect of C accepted by the compiler is basically pre-ANSI (K&R 1978) 
-with some common extensions. (See the DIALECT file for specifics.) That is
-a reflection its original purpose (to compile a mid-1980s codebase); work 
-is underway to migrate the front end to full ANSI C89 compliance.
+The dialect of C accepted by the compiler was originally pre-ANSI (K&R 1978) 
+with some common extensions. That is a reflection its original purpose (to 
+compile a mid-1980s codebase); work is underway to migrate the front end to 
+full ANSI C89 compliance and is nearly complete. See DIALECT for status.
 
-The binary tools work on a proprietary object file format and produce a.out-
-format executables. These are documented in obj.h and a.out.h respectively.
-
-The compiler and its tools are fully functional and have been fairly well-
-tested, though they are works in progress. In particular, the optimizer is
-quite minimal: the framework for a more aggressive optimizer is there, but
-for the moment only rudimentary data-flow analysis is done to aid the register
-allocator and clean up the more egregious output from the code generator.
+The binary tools work on a non-standard object file format and produce a.out-
+style executables. These are documented in obj.h and a.out.h respectively.
 
 NCC includes:
 
@@ -27,4 +21,4 @@ nexec: tool to run ncc a.out binaries on 64-bit Intel/AMD Linux systems
 These are all original works and are BSD-licensed. See LICENSE and comments.
 
 Charles Youse <charles@gnuless.org>
-January 8, 2019
+January 10, 2019

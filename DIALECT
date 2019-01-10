@@ -1,22 +1,35 @@
-The compiler accepts "classic" C as described in K&R (1978), with a few
-extensions. Most of these were common extensions that made it into C89.
+The compiler originally implemented K&R C, but it now implements
+most of ANSI C89. The type system, anyway, is complete. Highlights:
 
-* 'unsigned' is extended to all integer types.
+  - enumerations
 
-K&R only mentions 'unsigned int'. NCC extends this qualifier to all 
-integral types, including 'char', which is signed by default.
+  - qualifiers (const, volatile)
 
-* Separate member namespaces.
+  - signed types (mostly a useless keyword, but 'signed char' must
+   be treated as distinct from 'char' although they are both signed)
 
-'struct' and 'union' types each enclose a unique namespace, so members of
-different aggregate types need not have different names. 
+  - long double (same as 'double', but also technically distinct)
 
-* Arbitrarily-typed bitfields.
+  - void and void pointers, etc.
 
-The compiler allows bit fields to have any integral type: the size of the type 
-limits the number of bits that are permitted and sets the alignment requirement 
-of the word that contains field. Also, the signedness of the field is honored.
+All expression evaluation has been updated to deal with the new
+types, e.g., const is enforced, floats (vs double) arithmetic is
+allowed, etc.
+
+The compiler has always honored separate member namespaces and
+allowed bitfields of any integral type (any width, signed or unsigned).
+
+Two (big) features are still missing but are in progress:
+
+  - function prototypes and new-style function definitions
+  - struct assignment (including struct arguments and return types)
+
+I believe once these two things are implemented the compiler will
+be 100% ANSI C89 compliant.
+
+CAVEAT: many of the changes have not been heavily tested. Once the
+features are completed, a test suite will be the next step.
 
 Charles Youse <charles@gnuless.org>
-January 8, 2019
+January 10, 2019
 
