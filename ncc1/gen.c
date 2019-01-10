@@ -43,6 +43,7 @@ normalize(tree)
 
         switch (tree->type->ts & T_BASE)
         {
+        case T_SCHAR:
         case T_CHAR:    tree->u.con.i = (char) tree->u.con.i; break;
         case T_UCHAR:   tree->u.con.i = (unsigned char) tree->u.con.i; break;
         case T_SHORT:   tree->u.con.i = (short) tree->u.con.i; break;
@@ -260,11 +261,11 @@ static struct
 {
     { E_ASSIGN, T_IS_INTEGRAL | T_PTR, T_IS_INTEGRAL | T_PTR, I_MOV },
     { E_ASSIGN, T_FLOAT, T_FLOAT, I_MOVSS },
-    { E_ASSIGN, T_DOUBLE, T_DOUBLE, I_MOVSD },
+    { E_ASSIGN, T_DOUBLE | T_LDOUBLE, T_DOUBLE | T_LDOUBLE, I_MOVSD },
 
     { E_EQ, T_IS_INTEGRAL | T_PTR, T_IS_INTEGRAL | T_PTR, I_CMP },
     { E_EQ, T_FLOAT, T_FLOAT, I_UCOMISS },
-    { E_EQ, T_DOUBLE, T_DOUBLE, I_UCOMISD },
+    { E_EQ, T_DOUBLE | T_LDOUBLE, T_DOUBLE | T_LDOUBLE, I_UCOMISD },
 
     { E_SHL, T_IS_INTEGRAL, T_IS_INTEGRAL, I_SHL },
     { E_SHR, T_IS_SIGNED, T_IS_INTEGRAL, I_SAR },
@@ -275,17 +276,17 @@ static struct
     { E_XOR, T_IS_INTEGRAL | T_PTR, T_IS_INTEGRAL | T_PTR, I_XOR },
 
     { E_ADD, T_FLOAT, T_FLOAT, I_ADDSS },
-    { E_ADD, T_DOUBLE, T_DOUBLE, I_ADDSD },
+    { E_ADD, T_DOUBLE | T_LDOUBLE, T_DOUBLE | T_LDOUBLE, I_ADDSD },
     { E_ADD, T_IS_INTEGRAL | T_PTR, T_IS_INTEGRAL | T_PTR, I_ADD },
 
     { E_SUB, T_FLOAT, T_FLOAT, I_SUBSS },
-    { E_SUB, T_DOUBLE, T_DOUBLE, I_SUBSD },
+    { E_SUB, T_DOUBLE | T_LDOUBLE, T_DOUBLE | T_LDOUBLE, I_SUBSD },
     { E_SUB, T_IS_INTEGRAL | T_PTR, T_IS_INTEGRAL | T_PTR, I_SUB },
 
     { E_DIV, T_FLOAT, T_FLOAT, I_DIVSS },
-    { E_DIV, T_DOUBLE, T_DOUBLE, I_DIVSD },
+    { E_DIV, T_DOUBLE | T_LDOUBLE, T_DOUBLE | T_LDOUBLE, I_DIVSD },
     { E_MUL, T_FLOAT, T_FLOAT, I_MULSS },
-    { E_MUL, T_DOUBLE, T_DOUBLE, I_MULSD },
+    { E_MUL, T_DOUBLE | T_LDOUBLE, T_DOUBLE | T_LDOUBLE, I_MULSD },
     { E_MUL, T_IS_INTEGRAL | T_PTR, T_IS_INTEGRAL | T_PTR, I_IMUL },
 
     { E_CAST, T_IS_CHAR, T_IS_CHAR, I_NONE }, 
@@ -293,20 +294,20 @@ static struct
     { E_CAST, T_IS_INT, T_IS_INT, I_NONE },
     { E_CAST, T_IS_LONG | T_PTR, T_IS_LONG | T_PTR, I_NONE },
     { E_CAST, T_FLOAT, T_FLOAT, I_NONE },
-    { E_CAST, T_DOUBLE, T_DOUBLE, I_NONE },
-    { E_CAST, T_PTR | T_IS_LONG | T_IS_INT | T_IS_SHORT, T_CHAR, I_MOVSX },  
+    { E_CAST, T_DOUBLE | T_LDOUBLE, T_DOUBLE | T_LDOUBLE, I_NONE },
+    { E_CAST, T_PTR | T_IS_LONG | T_IS_INT | T_IS_SHORT, T_CHAR | T_SCHAR, I_MOVSX },  
     { E_CAST, T_PTR | T_IS_LONG | T_IS_INT | T_IS_SHORT, T_UCHAR, I_MOVZX },  
     { E_CAST, T_PTR | T_IS_LONG | T_IS_INT, T_SHORT, I_MOVSX },
     { E_CAST, T_PTR | T_IS_LONG | T_IS_INT, T_USHORT, I_MOVZX },
     { E_CAST, T_PTR | T_IS_LONG, T_INT, I_MOVSX },
     { E_CAST, T_PTR | T_IS_LONG, T_UINT, I_MOVZX },
     { E_CAST, T_PTR | T_IS_INTEGRAL, T_PTR | T_IS_INTEGRAL, I_MOV }, 
-    { E_CAST, T_FLOAT, T_DOUBLE, I_CVTSD2SS }, 
-    { E_CAST, T_DOUBLE, T_FLOAT, I_CVTSS2SD },  
+    { E_CAST, T_FLOAT, T_DOUBLE | T_LDOUBLE, I_CVTSD2SS }, 
+    { E_CAST, T_DOUBLE | T_LDOUBLE, T_FLOAT, I_CVTSS2SD },  
     { E_CAST, T_IS_INT | T_IS_LONG, T_FLOAT, I_CVTSS2SI }, 
-    { E_CAST, T_IS_INT | T_IS_LONG, T_DOUBLE, I_CVTSD2SI }, 
+    { E_CAST, T_IS_INT | T_IS_LONG, T_DOUBLE | T_LDOUBLE, I_CVTSD2SI }, 
     { E_CAST, T_FLOAT, T_IS_INT | T_IS_LONG, I_CVTSI2SS }, 
-    { E_CAST, T_DOUBLE, T_IS_INT | T_IS_LONG, I_CVTSI2SD }
+    { E_CAST, T_DOUBLE | T_LDOUBLE, T_IS_INT | T_IS_LONG, I_CVTSI2SD }
 };
 
 #define NR_CHOICES (sizeof(choices)/sizeof(*choices))
@@ -381,13 +382,17 @@ log_2(tree, mask)
    that leave a leaf on the tree and need it to be processed for 'goal'. */
 
 static struct tree *
-generate_leaf(tree, goal, cc)       /* E_REG E_CON E_IMM E_MEM */
+generate_leaf(tree, goal, cc)       /* E_NOP E_REG E_CON E_IMM E_MEM */
     struct tree * tree;
     int *         cc;
 {
     struct tree * zero;
 
-    if (!E_IS_LEAF(tree->op) || (tree->op == E_SYM)) error(ERROR_INTERNAL);
+    if (    ((tree->op == E_NOP) || (tree->type->ts & T_VOID)) 
+        &&  (goal != GOAL_EFFECT) )
+    {
+        error(ERROR_INTERNAL);
+    }
     
     if (goal == GOAL_CC) {
         if (tree->op == E_CON) {
@@ -671,17 +676,25 @@ generate_ternary(tree, goal, cc)    /* E_TERN */
     succeed_block(current_block, CC_INVERT(result_cc), false_block);
 
     current_block = true_block;
-    left = generate(left, GOAL_VALUE, NULL);
-    if (goal != GOAL_EFFECT) choose(E_ASSIGN, copy_tree(temp), left);
+
+    if (temp) {
+        left = generate(left, GOAL_VALUE, NULL);
+        choose(E_ASSIGN, copy_tree(temp), left);
+    } else
+        generate(left, GOAL_EFFECT, NULL);
+
     true_block = current_block;
     succeed_block(true_block, CC_ALWAYS, join_block);
-
     current_block = false_block;
-    right = generate(right, GOAL_VALUE, NULL);
-    if (goal != GOAL_EFFECT) choose(E_ASSIGN, copy_tree(temp), right);
+
+    if (temp) {
+        right = generate(right, GOAL_VALUE, NULL);
+        choose(E_ASSIGN, copy_tree(temp), right);
+    } else
+        generate(right, GOAL_EFFECT, NULL);
+
     false_block = current_block;
     succeed_block(false_block, CC_ALWAYS, join_block);
-
     current_block = join_block;
 
     if (goal != GOAL_EFFECT)
@@ -747,15 +760,15 @@ generate_call(tree, goal, cc)       /* E_CALL */
     emit(new_insn(I_CALL, operand(function)));
     if (stack_adjust) emit(new_insn(I_ADD, reg_tree(R_SP, new_type(T_LONG)), int_tree(T_LONG, (long) stack_adjust)));
 
-    if (goal == GOAL_EFFECT) {
-        free_type(type);
-        return NULL;
-    } else {
+    if (type->ts & T_VOID) 
+        tree = new_tree(E_NOP, type);
+    else {
         tree = temporary(type);
         reg = (tree->type->ts & T_IS_FLOAT) ? R_XMM0 : R_AX;
         choose(E_ASSIGN, copy_tree(tree), reg_tree(reg, copy_type(tree->type)));
-        return generate_leaf(tree, goal, cc);
     }
+
+    return generate_leaf(tree, goal, cc);
 }
 
 static struct tree *
@@ -1162,7 +1175,7 @@ divmod(op, left, right, result_cc)
     if (left->type->ts & T_IS_CHAR) {
         r_ax = reg_tree(R_AX, copy_type(left->type));
 
-        if (left->type->ts & T_CHAR) {
+        if (left->type->ts & (T_CHAR | T_SCHAR)) {
             choose(E_ASSIGN, copy_tree(r_ax), copy_tree(left));
             emit(new_insn(I_CBW));
             emit(new_insn(I_IDIV, right));
@@ -1689,6 +1702,7 @@ generate(tree, goal, cc)
     case E_COMMA:   return generate_comma(tree, goal, cc);
     case E_SYM:     return generate_sym(tree, goal, cc); 
 
+    case E_NOP:
     case E_CON:
     case E_IMM:
     case E_MEM:

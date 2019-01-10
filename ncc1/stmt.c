@@ -63,10 +63,10 @@ if_statement()
     match(KK_LPAREN);
     test = expression();
     test = scalar_expression(test);
-    match(KK_RPAREN);
     generate(test, GOAL_CC, &cc);
     succeed_block(current_block, cc, true_block);
     succeed_block(current_block, CC_INVERT(cc), else_block);
+    match(KK_RPAREN);
 
     current_block = true_block;
     statement();
@@ -108,10 +108,10 @@ while_statement()
     match(KK_LPAREN);
     test = expression();
     test = scalar_expression(test);
-    match(KK_RPAREN);
     generate(test, GOAL_CC, &cc);
     succeed_block(current_block, cc, body_block);
     succeed_block(current_block, CC_INVERT(cc), break_block);
+    match(KK_RPAREN);
 
     current_block = body_block;
     statement();
@@ -146,11 +146,11 @@ do_statement()
     match(KK_LPAREN);
     test = expression();
     test = scalar_expression(test);
-    match(KK_RPAREN);
-    match(KK_SEMI);
     succeed_block(current_block, CC_ALWAYS, continue_block);
     current_block = continue_block;
     generate(test, GOAL_CC, &cc);
+    match(KK_RPAREN);
+    match(KK_SEMI);
     succeed_block(current_block, cc, body_block);
     succeed_block(current_block, CC_INVERT(cc), break_block);
 
@@ -169,12 +169,14 @@ return_statement()
     return_type = current_function->type->next;
 
     if (token.kk != KK_SEMI) {
-        if (return_type->ts & T_IS_FLOAT) 
+        if (return_type->ts & T_VOID)
+            error(ERROR_RETURN);
+        else if (return_type->ts & T_IS_FLOAT) 
             tree = reg_tree(R_XMM0, copy_type(return_type));
         else
             tree = reg_tree(R_AX, copy_type(return_type));
 
-        tree = assignment_expression(tree);
+        tree = assignment_expression(tree, ASSIGNMENT_CONST);
         generate(tree, GOAL_EFFECT, NULL);
     }
 
@@ -439,6 +441,7 @@ statement()
         /* fall through */
     default: 
         tree = expression();
+        debug_tree(tree);
         tree = generate(tree, GOAL_EFFECT, NULL);
     case KK_SEMI:
         match(KK_SEMI);

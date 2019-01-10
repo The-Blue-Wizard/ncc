@@ -94,23 +94,82 @@ splice_types(type1, type2)
 /* check for compatibility between two types.
 
    if COMPAT_TYPES_COMPOSE is specified, additional type
-   information from 'type2' is merged into 'type1'. */
+   information from 'type2' is merged into 'type1'.
+
+   if COMPAT_TYPES_QUAL is specified, the types must carry
+   exactly the same qualifiers. 
+
+   if COMPAT_TYPES_ASSIGN is specified, then if 'type1' and
+   'type2' are pointer types, then the type pointed to by 
+   'type1' must be at least as qualified as the type pointed
+   to by 'type2'. */
 
 compat_types(type1, type2, flags)
     struct type * type1;
     struct type * type2;
 {
+    int assign = 0; 
+    int disqualified = 0;
+
     while (type1 && type2) {
         if ((type1->ts & T_BASE) != (type2->ts & T_BASE)) break;
         if (type1->tag != type2->tag) break;
         if ((type1->nr_elements && type2->nr_elements) && (type1->nr_elements != type2->nr_elements)) break;
         if ((flags & COMPAT_TYPES_COMPOSE) && (type2->nr_elements)) type1->nr_elements = type2->nr_elements;
         if ((flags & COMPAT_TYPES_QUALS) && ((type1->ts & T_QUAL_MASK) != (type2->ts & T_QUAL_MASK))) break;
+
+        /* order is important here, as we don't want to check assignment
+           qualifiers in the first pass, and we don't bother unless the
+           top levels are pointers. */
+
+        if ((assign == 1) && ((type1->ts & type2->ts & T_QUAL_MASK) != (type2->ts & T_QUAL_MASK)))
+            ++disqualified;
+
+        if ((flags & COMPAT_TYPES_ASSIGN) && !assign)
+            if (type1->ts & type2->ts & T_PTR)
+                ++assign;   /* 1 = check assignment qualifiers */
+            else
+                --assign;   /* -1 = don't check */
+
         type1 = type1->next;
         type2 = type2->next;
     }
 
     if (type1 || type2) error(ERROR_INCOMPAT);
+    if (disqualified) error(ERROR_DISQUAL);
+}
+
+/* merge type qualifiers from 'dst' into 'src'.
+   caller must ensure that the types are compatible. */
+
+merge_qualifiers(dst, src)
+    struct type * dst;
+    struct type * src;
+{
+    while (dst) 
+    {
+        dst->ts |= src->ts & T_QUAL_MASK;
+        dst = dst->next;
+        src = src->next;
+    }
+}
+
+/* returns non-zero if the type is modifiable. must recurse
+   through struct elements, since they can be 'const'. */
+
+modifiable(type)
+    struct type * type;
+{
+    struct symbol * symbol;
+
+    if (type->ts & T_CONST) return 0;
+
+    if (type->ts & T_TAG) {
+        for (symbol = type->tag->list; symbol; symbol = symbol->list) 
+            if (!modifiable(symbol->type)) return 0;
+    }
+
+    return 1;
 }
 
 /* return true if the type is complete, false otherwise */
@@ -150,6 +209,8 @@ size_of(type)
             size *= 8;
         else if (type->ts & T_FUNC)
             error(ERROR_ILLFUNC);
+        else if (type->ts & T_VOID)
+            error(ERROR_ILLVOID);
         else if (type->ts & T_TAG) {
             if (type->tag->ss & S_DEFINED)
                 size *= type->tag->i;
@@ -188,6 +249,8 @@ align_of(type)
             align = 8;
         else if (type->ts & T_FUNC)
             error(ERROR_ILLFUNC);
+        else if (type->ts & T_VOID)
+            error(ERROR_ILLVOID);
         else if (type->ts & T_TAG) {
             if (type->tag->ss & S_DEFINED)
                 align = type->tag->align;
@@ -203,8 +266,8 @@ align_of(type)
 }
 
 /* perform some preliminary checks on a type:
-     1. functions must return scalars,
-     2. array elements can't be functions,
+     1. functions must return scalars or void,
+     2. array elements can't be functions or void,
      3. only the first index of an array can be unbounded. */
 
 validate_type(type)
@@ -217,9 +280,11 @@ validate_type(type)
                     error(ERROR_ILLARRAY);
             } else if (type->next->ts & T_FUNC) {
                 error(ERROR_ILLFUNC);
+            } else if (type->next->ts & T_VOID) {
+                error(ERROR_ILLVOID);
             }
         } else if (type->ts & T_FUNC) {
-            if (!(type->next->ts & T_IS_SCALAR))
+            if (!(type->next->ts & (T_IS_SCALAR | T_VOID)))
                 error(ERROR_RETURN);
         }
         type = type->next;

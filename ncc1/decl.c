@@ -244,18 +244,26 @@ static struct
     int kk_ts;
     int t;
 } type_map[] = {
+    { KK_TS_VOID,                                   T_VOID },
     { KK_TS_INT,                                    T_INT },
+    { KK_TS_SIGNED,                                 T_INT },
+    { KK_TS_SIGNED | KK_TS_INT,                     T_INT },
     { KK_TS_UNSIGNED,                               T_UINT },
     { KK_TS_UNSIGNED | KK_TS_UNSIGNED,              T_UINT },
     { KK_TS_UNSIGNED | KK_TS_CHAR,                  T_UCHAR },
     { KK_TS_CHAR,                                   T_CHAR },
+    { KK_TS_SIGNED | KK_TS_CHAR,                    T_SCHAR },
     { KK_TS_UNSIGNED | KK_TS_CHAR,                  T_UCHAR },
     { KK_TS_SHORT,                                  T_SHORT },
+    { KK_TS_SIGNED | KK_TS_SHORT,                   T_SHORT },
     { KK_TS_SHORT | KK_TS_INT,                      T_SHORT },
+    { KK_TS_SIGNED | KK_TS_SHORT | KK_TS_INT,       T_SHORT },
     { KK_TS_UNSIGNED | KK_TS_SHORT,                 T_USHORT },
     { KK_TS_UNSIGNED | KK_TS_SHORT | KK_TS_INT,     T_USHORT },
     { KK_TS_LONG,                                   T_LONG },
     { KK_TS_LONG | KK_TS_INT,                       T_LONG },
+    { KK_TS_SIGNED | KK_TS_LONG,                    T_LONG },
+    { KK_TS_SIGNED | KK_TS_LONG | KK_TS_INT,        T_LONG },
     { KK_TS_UNSIGNED | KK_TS_LONG,                  T_ULONG },
     { KK_TS_UNSIGNED | KK_TS_LONG | KK_TS_INT,      T_ULONG },
     { KK_TS_FLOAT,                                  T_FLOAT },
@@ -279,11 +287,7 @@ map_type(int kk_ts)
 
 /* parse type specifier. if 'ss' is not NULL, then also allow
    a storage-class specifier. if no type specifiers at all 
-   are encountered, return NULL. 
-   
-   this function is perhaps a bit too picky about the order of 
-   the specifiers - K&R is actually unclear on this point. err 
-   on the side of simplicity. who writes 'int long extern' anyway? */
+   are encountered, return NULL. */
 
 static struct type *
 type_specifier(ss)
@@ -552,6 +556,7 @@ declarations(declare, flags, data)
                 }
 
                 validate_type(type);
+                if (type->ts & T_VOID) error(ERROR_ILLVOID);
                 first = 0;
 
                 if (declare(ss, id, type, (flags & DECLARATIONS_ARGS) ? (char *) args : data)) 

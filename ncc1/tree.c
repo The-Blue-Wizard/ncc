@@ -326,14 +326,14 @@ promote(tree)
     return tree;
 }
 
-/* make sure the tree is a scalar. */
+/* make sure the tree is a scalar */
 
 struct tree *
 scalar_expression(tree)
     struct tree * tree;
 {
     if (!(tree->type->ts & T_IS_SCALAR)) tree = promote(tree);
-    if (!(tree->type->ts & T_IS_SCALAR)) error(ERROR_STRUCT);
+    if (!(tree->type->ts & T_IS_SCALAR)) error(ERROR_SCALAR);
 
     return tree;
 }
@@ -417,7 +417,7 @@ scale_pointers(tree)
 /* if 'tree' represents the integral constant 0 and 'type' is a pointer,
    then convert the tree to a null pointer of 'type'. */
 
-struct tree *
+static struct tree *
 null_pointer(tree, type)
     struct tree * tree;
     struct type * type;
@@ -425,6 +425,53 @@ null_pointer(tree, type)
     if ((type->ts & T_PTR) && (tree->op == E_CON) && (tree->u.con.i == 0)) 
         tree = new_tree(E_CAST, copy_type(type), tree);
     
+    return tree;
+}
+
+/* if the type of 'tree' and 'type' are both pointer types, then:
+
+    if mode == VOID_POINTER_VOID:
+        if 'type' is a void *, and 'tree' is not, then
+        'tree' is cast to 'type'.
+
+    if mode == VOID_POINTER_OTHER:
+        if 'tree' is a void *, and 'type' is not, then
+        'tree' is cast to 'type'.
+
+   in either case, the qualifiers of the type pointed to by 'tree'
+   are preserved. */
+
+#define VOID_POINTER_VOID   0
+#define VOID_POINTER_OTHER  1
+
+static struct tree *
+void_pointer(tree, type, mode)
+    struct tree * tree;
+    struct type * type;
+{
+    struct type * tree_target;
+    struct type * type_target;
+    int           qual_ts;
+
+    if (!(tree->type->ts & T_PTR) || !(type->ts & T_PTR)) return tree;
+
+    tree_target = tree->type->next;
+    type_target = type->next;
+    qual_ts = tree_target->ts & T_QUAL_MASK;
+
+    if (        ((mode == VOID_POINTER_VOID) 
+            &&  (tree_target->ts & T_VOID) 
+            &&  !(type_target->ts & T_VOID))
+        ||
+                ((mode == VOID_POINTER_OTHER)
+            &&  (type_target->ts & T_VOID)
+            &&  !(tree_target->ts & T_VOID)) )
+    {
+        tree = new_tree(E_CAST, copy_type(type), tree);
+        tree->type->next->ts |= qual_ts;
+        return tree;
+    }
+
     return tree;
 }
 
@@ -436,7 +483,7 @@ check_operand_types(op, left, right)
     struct type * right;
 {
     if ((op != E_LOR) && (op != E_LAND) && (left->ts & right->ts & T_PTR))
-        compat_types(left, right, 0);
+        compat_types(left, right, (op == E_ASSIGN) ? COMPAT_TYPES_ASSIGN : 0);
 
     switch (op)
     {   
@@ -458,10 +505,18 @@ check_operand_types(op, left, right)
         else 
             break;
 
+    case E_TERN:
+        if (    (!(left->ts & T_IS_ARITH) || !(right->ts & T_IS_ARITH))
+            &&  (!(left->ts & right->ts & T_PTR)) 
+            &&  (!(left->ts & right->ts & T_VOID)))
+        {
+            error(ERROR_INCOMPAT);
+        } else
+            break;
+
     case E_EQ:
     case E_NEQ:
     case E_ASSIGN:
-    case E_TERN:
     case E_GT:
     case E_GTEQ:
     case E_LT:
@@ -577,11 +632,13 @@ is_type_specifier()
     case KK_ENUM:
     case KK_CHAR:
     case KK_SHORT:
+    case KK_SIGNED:
     case KK_INT:
     case KK_LONG:
     case KK_FLOAT:
     case KK_DOUBLE:
     case KK_UNSIGNED:
+    case KK_VOID:
         return 1;
     }
 
@@ -712,13 +769,15 @@ call_expression(tree)
 
     match(KK_LPAREN);
     while (token.kk != KK_RPAREN) {
-        argument = assignment_expression(NULL);
+        argument = assignment_expression(NULL, 0);
         argument = promote(argument);
 
         if (argument->type->ts & T_FLOAT)
             argument = new_tree(E_CAST, new_type(T_DOUBLE), argument);
 
         if (argument->type->ts & T_TAG) error(ERROR_STRUCT);
+        if (argument->type->ts & T_VOID) error(ERROR_ILLVOID);
+
         argument->list = tree->u.ch[1];
         tree->u.ch[1] = argument;
 
@@ -821,6 +880,7 @@ unary_expression()
         tree = cast_expression();
         tree = promote(tree);
         if (!(tree->type->ts & T_PTR)) error(ERROR_INDIR);
+        if (tree->type->next->ts & T_VOID) error(ERROR_ILLVOID);
         return new_tree(E_FETCH, copy_type(tree->type->next), tree);
 
     case KK_MINUS:
@@ -855,8 +915,8 @@ cast_expression()
         tree = cast_expression();
         tree = promote(tree);
 
-        if (    !(type->ts & T_IS_SCALAR) 
-            ||  !(tree->type->ts & T_IS_SCALAR)
+        if (    !(type->ts & (T_IS_SCALAR | T_VOID)) 
+            ||  !(tree->type->ts & (T_IS_SCALAR | T_VOID))
             ||  ((tree->type->ts & T_PTR) && (type->ts & T_IS_FLOAT))
             ||  ((tree->type->ts & T_IS_FLOAT) && (type->ts & T_PTR)) )
         {
@@ -903,7 +963,11 @@ conditional_expression()
         match(KK_COLON);
         right = conditional_expression();
         condition = scalar_expression(condition);
+        left = void_pointer(left, right->type, VOID_POINTER_VOID);
+        right = void_pointer(right, left->type, VOID_POINTER_VOID);
         condition = token_tree(KK_QUEST, left, right, condition);
+        merge_qualifiers(condition->type, left->type);
+        merge_qualifiers(condition->type, right->type);
     }
 
     return condition;
@@ -911,10 +975,14 @@ conditional_expression()
 
 /* during normal parsing, 'left' is passed in NULL.
    initializers (from init.c) will call assignment_expression
-   with the left side supplied, to "fake" an assignment. */
+   with the left side supplied, to "fake" an assignment. 
+
+   if ASSIGNMENT_CONST is specified in 'flags', then the
+   'const'ness of the left side will be ignored. */
+
 
 struct tree *
-assignment_expression(left)
+assignment_expression(left, flags)
     struct tree * left;
 {
     struct tree * right;
@@ -946,11 +1014,17 @@ assignment_expression(left)
     }
 
     lvalue(left);
-    right = assignment_expression(NULL);
+
+    if (!(flags & ASSIGNMENT_CONST) && !modifiable(left->type)) 
+        error(ERROR_ASSCONST);
+
+    right = assignment_expression(NULL, 0);
 
     if (op == E_ASSIGN) {
         /* other assignment operators have limited combinations 
            of operands that make these unnecessary at best */
+        right = void_pointer(right, left->type, VOID_POINTER_VOID);
+        right = void_pointer(right, left->type, VOID_POINTER_OTHER);
         right = null_pointer(right, left->type);
         right = promote(right);
     }
@@ -980,11 +1054,11 @@ expression()
     struct tree * left;
     struct tree * right;
 
-    left = assignment_expression(NULL);
+    left = assignment_expression(NULL, 0);
 
     while (token.kk == KK_COMMA) {
         lex();
-        right = assignment_expression(NULL);
+        right = assignment_expression(NULL, 0);
         left = new_tree(E_COMMA, copy_type(right->type), right, left);
     }
 

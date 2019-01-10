@@ -88,7 +88,7 @@ initialize_scalar(type, outermost)
 
     symbol = new_symbol(NULL, S_AUTO, copy_type(type));
     tree = symbol_tree(symbol);
-    tree = assignment_expression(tree);
+    tree = assignment_expression(tree, ASSIGNMENT_CONST);
     decap_tree(tree, NULL, NULL, &tree, NULL);
     tree = generate(tree, GOAL_VALUE, NULL);
     free_symbol(symbol);
@@ -309,7 +309,7 @@ initializer(symbol, ss)
             if (ss & S_EXTERN) error(ERROR_BADINIT);
             if (!(symbol->type->ts & T_IS_SCALAR)) error(ERROR_BADINIT);
             tree = symbol_tree(symbol);
-            tree = assignment_expression(tree);
+            tree = assignment_expression(tree, ASSIGNMENT_CONST);
             generate(tree, GOAL_EFFECT, NULL);
             if (braced) match(KK_RBRACE);
         }

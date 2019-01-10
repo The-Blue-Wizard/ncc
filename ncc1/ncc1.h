@@ -123,7 +123,6 @@ extern struct tree *    expression();
 extern struct tree *    assignment_expression();
 extern struct tree *    conditional_expression();
 extern struct tree *    scalar_expression();
-extern struct tree *    null_pointer();
 extern struct tree *    reg_tree();
 extern struct tree *    stack_tree();
 extern struct tree *    memory_tree();
@@ -140,6 +139,10 @@ extern struct tree *    generate();
 extern struct tree *    float_literal();
 extern struct defuse *  find_defuse();
 extern struct defuse *  find_defuse_by_symbol();
+
+/* flags for assignment_expression() */
+
+#define ASSIGNMENT_CONST        0x00000001
 
 /* goals for generate() */
 
@@ -162,6 +165,7 @@ extern struct defuse *  find_defuse_by_symbol();
 
 #define COMPAT_TYPES_COMPOSE    0x00000001
 #define COMPAT_TYPES_QUALS      0x00000002
+#define COMPAT_TYPES_ASSIGN     0x00000004
 
 /* output segments */
 
@@ -231,4 +235,8 @@ extern struct defuse *  find_defuse_by_symbol();
 #define ERROR_DUPCLASS      58      /* duplicate storage class */
 #define ERROR_DUPSPEC       59      /* duplicate type specifier */
 #define ERROR_ILLTYPE       60      /* illegal type specification */
+#define ERROR_ASSCONST      61      /* assignment to const */
+#define ERROR_DISQUAL       62      /* discards qualifiers */
+#define ERROR_ILLVOID       63      /* illegal use of void type */
+#define ERROR_SCALAR        64      /* scalar expression required */
 

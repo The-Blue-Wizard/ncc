@@ -117,7 +117,11 @@ static char *errors[] =
     "duplicate type qualifier",             /* ERROR_DUPQUAL */
     "duplicate storage class",              /* ERROR_DUPCLASS */
     "duplicate type specifier",             /* ERROR_DUPSPEC */
-    "illegal type specification"            /* ERROR_ILLTYPE */
+    "illegal type specification",           /* ERROR_ILLTYPE */
+    "assignment to const",                  /* ERROR_ASSCONST */
+    "qualifiers discarded",                 /* ERROR_DISQUAL */
+    "illegal use of void type",             /* ERROR_ILLVOID */
+    "scalar expression required"            /* ERROR_SCALAR */
 };
 
 error(code)
