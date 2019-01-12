@@ -136,6 +136,7 @@ struct token
 #define KK_MODEQ    /* %= */    62
 #define KK_XOREQ    /* ^= */    63    
 #define KK_EQ       /* = */     64  
+#define KK_ELLIP    /* ... */   65
 
 #define KK_AUTO                 70          /* keywords */
 #define KK_BREAK                71      

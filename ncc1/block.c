@@ -583,9 +583,8 @@ analyze_blocks()
 
 /* put the master block list in depth-first order */
 
-static
-sequence1(block)
-    struct block * block;
+static void
+sequence1(struct block * block)
 {
     struct block * successor;
     int            n;
@@ -601,7 +600,8 @@ sequence1(block)
     }
 }
 
-sequence_blocks()
+void
+sequence_blocks(void)
 {
     struct block * block;
 

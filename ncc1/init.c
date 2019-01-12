@@ -83,16 +83,8 @@ initialize_scalar(type, outermost)
         lex();
     }
 
-    /* fake an assignment to a fake symbol of the right type, then discard
-       everything but the right side of the assignment expression. */
-
-    symbol = new_symbol(NULL, S_AUTO, copy_type(type));
-    tree = symbol_tree(symbol);
-    tree = assignment_expression(tree, ASSIGNMENT_CONST);
-    decap_tree(tree, NULL, NULL, &tree, NULL);
+    tree = fake_assignment(type);
     tree = generate(tree, GOAL_VALUE, NULL);
-    free_symbol(symbol);
-
     if ((tree->op != E_CON) && (tree->op != E_IMM)) error(ERROR_BADINIT);
 
     /* static/extern address have RIP set - lose it */

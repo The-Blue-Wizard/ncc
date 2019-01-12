@@ -30,7 +30,25 @@ struct type
     struct type *   next;
     int             nr_elements;  /* T_ARRAY */
     struct symbol * tag;          /* T_TAG */
+    struct proto  * proto;        /* T_FUNC: NULL = old-style */
 };
+
+/* the arguments in a prototype/new-style definition
+   are expensive to copy, so they are reference-counted. 
+
+   note that an old-style function type has no proto at all
+   (type.proto = NULL), whereas a new-style function type with
+   no arguments has a proto with an empty 'args' list. */
+
+struct proto
+{
+    int             ps;             /* P_* */
+    int             refs;           /* reference count */
+    struct symbol * args;           /* list of arguments, NULL = (void) */
+};
+
+#define P_VARIADIC  0x00000001      /* ... trails 'args' */
+#define P_STALE     0x00000002      /* dirty hack: prototyped args are "stale" */
 
 /* type nodes will have exactly one of the following bits set. they're defined
    as a powerset so that testing for groups of types is a simple operation. 

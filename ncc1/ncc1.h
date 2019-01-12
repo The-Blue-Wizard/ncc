@@ -22,13 +22,6 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
-#ifndef __STDC__
-typedef long float double;
-#define strtod strtolf
-#else
-extern void output(char * fmt, ...);
-#endif
-
 /* let's start off with the basics. */
 
 #define BITS                8
@@ -103,24 +96,45 @@ extern struct block *   exit_block;
 extern struct block *   first_block;
 extern struct block *   last_block;
 
+extern void            yyinit(void);
+extern int             lex(void);
+extern void            expect(int);
+extern void            match(int);
+extern void            prohibit(int);
+extern void            translation_unit(void);
+extern void            local_declarations(void);
+extern void            output(char *, ...);
+extern struct symbol * new_symbol(struct string *, int, struct type *);
+extern void            free_symbol(struct symbol *);
+extern struct symbol * find_symbol_list(struct string *, struct symbol **);
+extern void            put_symbol_list(struct symbol *, struct symbol **);
+extern void            free_symbol_list(struct symbol **);
+extern struct proto  * new_proto(void);
+extern struct proto  * copy_proto(struct proto *);
+extern void            free_proto(struct proto *);
+extern int             peek_type_specifier(void);
+extern void            enter_scope(void);
+extern void            exit_scope(int);
+extern struct type   * argument_type(struct type *, int);
+extern void            sequence_blocks(void);
+extern void            allocate_regs(void);
+extern struct tree   * assignment_expression(struct tree *, int);
+extern struct tree   * fake_assignment(struct type *);
+extern struct tree   * expression(void);
+
 extern char *           allocate();
 extern struct string *  stringize();
 extern struct symbol *  string_symbol();
-extern struct symbol *  new_symbol();
 extern struct symbol *  find_symbol();
 extern struct symbol *  find_symbol_by_reg();
 extern struct symbol *  find_typedef();
-extern struct symbol *  find_symbol_list();
 extern struct symbol *  temporary_symbol();
 extern struct symbol *  find_label();
 extern struct type *    new_type();
 extern struct type *    copy_type();
 extern struct type *    splice_types();
-extern struct type *    argument_type();
 extern struct tree *    new_tree();
 extern struct tree *    copy_tree();
-extern struct tree *    expression();
-extern struct tree *    assignment_expression();
 extern struct tree *    conditional_expression();
 extern struct tree *    scalar_expression();
 extern struct tree *    reg_tree();
@@ -139,6 +153,11 @@ extern struct tree *    generate();
 extern struct tree *    float_literal();
 extern struct defuse *  find_defuse();
 extern struct defuse *  find_defuse_by_symbol();
+
+/* mode for exit_scope() */
+
+#define EXIT_SCOPE_BLOCK        0
+#define EXIT_SCOPE_PROTO        1
 
 /* flags for assignment_expression() */
 
@@ -166,6 +185,11 @@ extern struct defuse *  find_defuse_by_symbol();
 #define COMPAT_TYPES_COMPOSE    0x00000001
 #define COMPAT_TYPES_QUALS      0x00000002
 #define COMPAT_TYPES_ASSIGN     0x00000004
+
+/* mode for argument_type() */
+
+#define ARGUMENT_TYPE_OLD       0
+#define ARGUMENT_TYPE_NEW       1
 
 /* output segments */
 
@@ -239,4 +263,8 @@ extern struct defuse *  find_defuse_by_symbol();
 #define ERROR_DISQUAL       62      /* discards qualifiers */
 #define ERROR_ILLVOID       63      /* illegal use of void type */
 #define ERROR_SCALAR        64      /* scalar expression required */
+#define ERROR_VARIADIC      65      /* illegal variadic function */
+#define ERROR_DUPARG        66      /* duplicate argument name */
+#define ERROR_ARGNAME       67      /* missing argument name */
+#define ERROR_ARGCOUNT      68      /* incorrect number of arguments */
 

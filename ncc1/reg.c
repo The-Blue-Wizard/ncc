@@ -397,7 +397,8 @@ reconcile(from, n)
 
 }
 
-allocate_regs()
+void
+allocate_regs(void)
 {
     struct block * block;
     int            n;

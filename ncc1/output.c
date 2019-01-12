@@ -205,9 +205,11 @@ output(fmt)
             case 'G':
                 symbol = va_arg(args, struct symbol *);
 
-                if ((symbol->ss & (S_EXTERN | S_STATIC)) && (symbol->scope == SCOPE_GLOBAL) && symbol->id)
+                if (    (symbol->ss & S_EXTERN) 
+                    ||  ((symbol->ss & S_STATIC) && (symbol->scope == SCOPE_GLOBAL) && symbol->id))
+                {
                     fprintf(output_file, "_%s", symbol->id->data);
-                else if (symbol->ss & (S_STATIC | S_EXTERN)) 
+                } else if (symbol->ss & (S_STATIC | S_EXTERN)) 
                     fprintf(output_file, "L%d", symbol->i);
                 else 
                     error(ERROR_INTERNAL);

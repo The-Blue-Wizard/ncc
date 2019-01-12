@@ -121,7 +121,11 @@ static char *errors[] =
     "assignment to const",                  /* ERROR_ASSCONST */
     "qualifiers discarded",                 /* ERROR_DISQUAL */
     "illegal use of void type",             /* ERROR_ILLVOID */
-    "scalar expression required"            /* ERROR_SCALAR */
+    "scalar expression required",           /* ERROR_SCALAR */
+    "illegal variadic function",            /* ERROR_VARIADIC */
+    "duplicate argument name",              /* ERROR_DUPARG */
+    "missing argument name",                /* ERROR_ARGNAME */
+    "incorrect number of arguments"         /* ERROR_ARGCOUNT */
 };
 
 error(code)

@@ -106,10 +106,15 @@ struct string
 #define S_MEMBER        0x00000400
 #define S_LABEL         0x00000800
 
-    /* formal arguments are put in this storage class until 
+    /* old-style arguments are put in this storage class until 
        their types have been declared in the function header */
 
-#define S_ARG           0x00001000
+#define S_OLD_ARG       0x00001000
+
+    /* symbols marked S_HIDDEN were declared in a prototype
+       scope and are forever hidden from lookups. */
+
+#define S_HIDDEN        0x08000000
 
     /* file-scope variable definitions that aren't explicitly
        initialized are S_TENTATIVE; if we get to the end of 

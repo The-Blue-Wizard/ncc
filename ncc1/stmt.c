@@ -244,7 +244,7 @@ compound()
     local_declarations();
     while (token.kk != KK_RBRACE) statement();
     match(KK_RBRACE);
-    exit_scope();
+    exit_scope(EXIT_SCOPE_BLOCK);
 }
 
 static
@@ -441,7 +441,6 @@ statement()
         /* fall through */
     default: 
         tree = expression();
-        debug_tree(tree);
         tree = generate(tree, GOAL_EFFECT, NULL);
     case KK_SEMI:
         match(KK_SEMI);

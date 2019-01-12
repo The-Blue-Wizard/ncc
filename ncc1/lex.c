@@ -49,8 +49,8 @@ static struct token next = { KK_NL };
 
 /* process a floating-point constant */
 
-static
-fcon()
+static int
+fcon(void)
 {
     char * endptr;
     int    kk;
@@ -82,8 +82,8 @@ fcon()
 #define ISODIGIT(c)     (isdigit(c) && ((c) < '8'))
 #define DIGIT_VALUE(c)  ((c) - '0')
 
-static
-escape()
+static int
+escape(void)
 {
     int c;
 
@@ -122,8 +122,8 @@ escape()
     return c;
 }
 
-static
-ccon()
+static int
+ccon(void)
 {
     int value = 0;
 
@@ -138,8 +138,10 @@ ccon()
     return KK_ICON;
 }
 
-static
-strlit()
+/* interpret/convert a string literal */
+
+static int
+strlit(void)
 {
     char *  data = yytext;
     char *  cp = yytext;
@@ -158,8 +160,8 @@ strlit()
 /* stash character 'c' in the token buffer, growing
    the buffer if necessary. */
 
-static
-yystash(c)
+static void
+yystash(int c)
 {
     char * new_yybuf;
 
@@ -199,7 +201,8 @@ static struct
 
 #define NR_KEYWORDS (sizeof(keyword)/sizeof(*keyword))
 
-yyinit()
+void
+yyinit(void)
 {
     struct string * k;
     int             i;
@@ -214,8 +217,8 @@ yyinit()
 
 /* determine the type and value of integral constants. */
 
-static 
-icon()
+static int
+icon(void)
 {
     unsigned long value = 0;
     char *        endptr;
@@ -266,8 +269,8 @@ icon()
 /* just like a flex auto-generated yylex, except that we don't
    bother stashing tokens in 'yytext' if the text is irrelevant. */
 
-static
-yylex()
+static int
+yylex(void)
 {
     int             delim;
     int             backslash;
@@ -418,6 +421,17 @@ yylex()
             ungetc(yych, yyin);
             yych = '.';
             break;
+        } 
+
+        if (yych == '.') {
+            yynext();
+
+            if (yych == '.') {
+                yynext();
+                return KK_ELLIP;
+            }
+
+            error(ERROR_LEXICAL);  
         }
 
         return KK_DOT;
@@ -560,8 +574,8 @@ yylex()
    input. the parser needs this in a few random circumstances 
    where the grammar is slightly irregular. */
 
-peek(id)
-    struct string ** id;
+int
+peek(struct string ** id)
 {
     struct token saved;
     int          kk;
@@ -590,8 +604,8 @@ peek(id)
     yylex()
         the scanner proper, divides the input into tokens */
 
-static
-ylex()
+static int
+ylex(void)
 {
     if (next.kk == KK_NONE) {
         token.kk = yylex();
@@ -601,7 +615,8 @@ ylex()
     }
 }
 
-lex()
+int
+lex(void)
 {
     ylex();
     while (token.kk == KK_NL) {
@@ -631,18 +646,22 @@ lex()
 /* simple parsing helper functions.
    these should be self-explanatory. */
 
-expect(kk)
+void
+expect(int kk)
 {
     if (token.kk != kk) error(ERROR_SYNTAX);
 }
 
-prohibit(kk)
+void
+prohibit(int kk)
 {
     if (token.kk == kk) error(ERROR_SYNTAX);
 }
 
-match(kk)
+void
+match(int kk)
 {
     expect(kk);
     lex();
 }
+

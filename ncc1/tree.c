@@ -616,8 +616,8 @@ token_tree(kk, left, right, condition)
 /* peek into the future and return true if it looks like
    a type specifier, or false otherwise. */
 
-static
-is_type_specifier()
+int
+peek_type_specifier(void)
 {
     struct string * id;
     int             kk;
@@ -653,9 +653,8 @@ is_type_specifier()
    this function is responsible for ensuring the passed tree
    is appropriate for the operation, so callers need not worry. */
 
-struct tree *
-pre_or_post(tree, op, kk)
-    struct tree * tree;
+static struct tree *
+pre_or_post(struct tree * tree, int op, int kk)
 {
     struct tree * one;
 
@@ -674,10 +673,10 @@ pre_or_post(tree, op, kk)
    remotely fancy is binary_expression(), which takes advantage of
    the common associativity of the middle precedence levels. */
 
-static struct tree * cast_expression();
+static struct tree * cast_expression(void);
 
 static struct tree *
-primary_expression()
+primary_expression(void)
 {
     struct symbol * symbol;
     struct tree   * tree;
@@ -728,8 +727,7 @@ primary_expression()
 }
 
 static struct tree *
-member_expression(tree)
-    struct tree * tree;
+member_expression(struct tree * tree)
 {
     struct symbol * tag;
     struct symbol * member;
@@ -754,20 +752,17 @@ member_expression(tree)
     return new_tree(E_FETCH, copy_type(tree->type->next), tree);
 }
 
-static struct tree *
-call_expression(tree)
-    struct tree * tree;
+/* process actual function arguments. these come in two varieties, of 
+   course: arguments that are matched with formal prototyped arguments,
+   and those that are not. the rules are obviously different, and the 
+   two may be mixed in one call (think: variadic functions), hence two 
+   different functions. */
+
+static void
+old_actual_arguments(struct tree * tree)
 {
     struct tree * argument;
 
-    tree = promote(tree);
-
-    if ((!(tree->type->ts & T_PTR)) || (!(tree->type->next->ts & T_FUNC))) 
-        error(ERROR_NEEDFUNC);
-
-    tree = new_tree(E_CALL, copy_type(tree->type->next->next), tree, NULL);
-
-    match(KK_LPAREN);
     while (token.kk != KK_RPAREN) {
         argument = assignment_expression(NULL, 0);
         argument = promote(argument);
@@ -787,13 +782,67 @@ call_expression(tree)
         } else
             break;
     }
-    match(KK_RPAREN);
+}
 
-    return tree;
+static void
+new_actual_arguments(struct proto * proto, struct tree * tree)
+{
+    struct symbol * proto_arg;
+    struct tree   * argument;
+
+    proto_arg = proto->args;
+
+    while (token.kk != KK_RPAREN) {
+        if (proto_arg == NULL) {
+            if (!(proto->ps & P_VARIADIC)) 
+                error(ERROR_ARGCOUNT);
+            else
+                break;
+        }
+
+        argument = fake_assignment(proto_arg->type);
+        argument->list = tree->u.ch[1];
+        tree->u.ch[1] = argument;
+        proto_arg = proto_arg->list;
+
+        if (token.kk == KK_COMMA) {
+            lex();
+            prohibit(KK_RPAREN);
+        } else
+            break;
+    }
+
+    if (proto_arg) error(ERROR_ARGCOUNT);
+    if (proto->ps & P_VARIADIC) old_actual_arguments(tree);
 }
 
 static struct tree *
-postfix_expression()
+call_expression(struct tree * tree)
+{
+    struct tree  * argument;
+    struct proto * proto;
+
+    tree = promote(tree);
+
+    if ((!(tree->type->ts & T_PTR)) || (!(tree->type->next->ts & T_FUNC))) 
+        error(ERROR_NEEDFUNC);
+
+    proto = tree->type->next->proto;
+    tree = new_tree(E_CALL, copy_type(tree->type->next->next), tree, NULL);
+    match(KK_LPAREN);
+
+    if (proto) 
+        new_actual_arguments(proto, tree);
+    else
+        old_actual_arguments(tree);
+
+    match(KK_RPAREN);
+    return tree;
+}
+
+
+static struct tree *
+postfix_expression(void)
 {
     struct tree * tree;
     struct tree * index;
@@ -829,7 +878,7 @@ postfix_expression()
 }
 
 static struct tree *
-unary_expression()
+unary_expression(void)
 {
     struct type * type;
     struct tree * tree;
@@ -839,7 +888,7 @@ unary_expression()
     switch (token.kk) {
     case KK_SIZEOF:
         lex();
-        if ((token.kk == KK_LPAREN) && is_type_specifier()) {
+        if ((token.kk == KK_LPAREN) && peek_type_specifier()) {
             lex();
             type = abstract_type();
             match(KK_RPAREN);
@@ -903,12 +952,12 @@ unary_expression()
 }
 
 static struct tree *
-cast_expression()
+cast_expression(void)
 {
     struct type *   type;
     struct tree *   tree;
 
-    if ((token.kk == KK_LPAREN) && is_type_specifier()) {
+    if ((token.kk == KK_LPAREN) && peek_type_specifier()) {
         lex();
         type = abstract_type();
         match(KK_RPAREN);
@@ -929,7 +978,7 @@ cast_expression()
 }
 
 static struct tree *
-binary_expression(prec)
+binary_expression(int prec)
 {
     struct tree * left;
     struct tree * right;
@@ -949,7 +998,7 @@ binary_expression(prec)
 }
 
 struct tree *
-conditional_expression()
+conditional_expression(void)
 {
     struct tree * condition;
     struct tree * left;
@@ -973,17 +1022,15 @@ conditional_expression()
     return condition;
 }
 
-/* during normal parsing, 'left' is passed in NULL.
-   initializers (from init.c) will call assignment_expression
-   with the left side supplied, to "fake" an assignment. 
+/* during normal parsing, 'left' is passed in NULL. 
+   fake_assignment() calls this function with the left 
+   side supplied, to "fake" an assignment. 
 
-   if ASSIGNMENT_CONST is specified in 'flags', then the
-   'const'ness of the left side will be ignored. */
-
+   if mode is ASSIGNMENT_CONST, then the 'const'ness
+   of the left side will be ignored. */
 
 struct tree *
-assignment_expression(left, flags)
-    struct tree * left;
+assignment_expression(struct tree * left, int mode)
 {
     struct tree * right;
     int           op;
@@ -1015,7 +1062,7 @@ assignment_expression(left, flags)
 
     lvalue(left);
 
-    if (!(flags & ASSIGNMENT_CONST) && !modifiable(left->type)) 
+    if ((mode != ASSIGNMENT_CONST) && !modifiable(left->type)) 
         error(ERROR_ASSCONST);
 
     right = assignment_expression(NULL, 0);
@@ -1048,8 +1095,30 @@ assignment_expression(left, flags)
     return left;
 }
 
+/* fake an assignment to a fake symbol of the right type, then discard
+   everything but the right side of the assignment expression. this is
+   done to get the right side type-checked and appropriately cast without
+   actually doing an assignment; static initializer expressions and 
+   prototyped function arguments use this. */
+
 struct tree *
-expression()
+fake_assignment(struct type * type)
+{
+    struct symbol * symbol;
+    struct tree   * tree;
+
+    symbol = new_symbol(NULL, S_AUTO, copy_type(type));
+    tree = symbol_tree(symbol);
+    tree = assignment_expression(tree, ASSIGNMENT_CONST);
+    decap_tree(tree, NULL, NULL, &tree, NULL);
+    tree = generate(tree, GOAL_VALUE, NULL);
+    free_symbol(symbol);
+
+    return tree;
+}
+
+struct tree *
+expression(void)
 {
     struct tree * left;
     struct tree * right;

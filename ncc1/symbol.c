@@ -136,9 +136,7 @@ static struct symbol * symbol_buckets[NR_SYMBOL_BUCKETS + 1];
    the caller yields ownership. */
 
 struct symbol *
-new_symbol(id, ss, type)
-    struct string * id;
-    struct type *   type;
+new_symbol(struct string * id, int ss, struct type * type)
 {
     struct symbol * symbol;
 
@@ -179,8 +177,8 @@ put_symbol(symbol, scope)
 
 /* remove the symbol from the symbol table. */
 
-get_symbol(symbol)
-    struct symbol * symbol;
+static void
+get_symbol(struct symbol * symbol)
 {
     struct symbol ** bucketp;
 
@@ -191,9 +189,8 @@ get_symbol(symbol)
 
 /* put the symbol on the end of the list. */
 
-put_symbol_list(symbol, list)
-    struct symbol *  symbol;
-    struct symbol ** list;
+void
+put_symbol_list(struct symbol * symbol, struct symbol ** list)
 {
     while (*list) list = &((*list)->list);
     *list = symbol;
@@ -202,9 +199,7 @@ put_symbol_list(symbol, list)
 /* find a symbol on the list. returns NULL if not found. */
 
 struct symbol *
-find_symbol_list(id, list)
-    struct string *  id;
-    struct symbol ** list;
+find_symbol_list(struct string * id, struct symbol ** list)
 {
     struct symbol * symbol = *list;
 
@@ -262,6 +257,7 @@ find_symbol(id, ss, start, end)
 
     i = SYMBOL_BUCKET(id);
     for (symbol = symbol_buckets[i]; symbol; symbol = symbol->link) {
+        if (symbol->ss & S_HIDDEN) continue;
         if (symbol->scope < start) break;
         if (symbol->scope > end) continue;
         if (symbol->id != id) continue;
@@ -359,14 +355,17 @@ walk_symbols(start, end, f)
 
 /* entering a scope is trivial. */
 
-enter_scope()
+void
+enter_scope(void)
 {
     ++current_scope;
     if (current_scope > SCOPE_MAX) error(ERROR_NESTING);
 }
 
-/* exiting a scope just moves all symbols in the current 
-   scope into SCOPE_RETIRED, so they can't be seen. */
+/* exiting a scope is called when exiting a block scope
+   (EXIT_SCOPE_BLOCK) or when exiting a prototype scope
+   (EXIT_SCOPE_PROTO). in both cases, the symbols are
+   removed from view, it just depends how. */
 
 static
 exit1(symbol)
@@ -376,21 +375,48 @@ exit1(symbol)
     put_symbol(symbol, SCOPE_RETIRED);
 }
 
-exit_scope()
+static
+exit2(symbol)
+    struct symbol * symbol;
 {
-    walk_symbols(current_scope, SCOPE_MAX, exit1);
+    get_symbol(symbol);
+    symbol->ss |= S_HIDDEN;
+    put_symbol(symbol, current_scope - 1);
+}
+
+void
+exit_scope(int mode)
+{
+    if (mode == EXIT_SCOPE_BLOCK)
+        walk_symbols(current_scope, SCOPE_MAX, exit1);
+    else
+        walk_symbols(current_scope, SCOPE_MAX, exit2);
+
     --current_scope;
 }
 
-/* after a function definition is completed, call free_symbols()
-   to finally clear out all the out-of-scope symbols. */
+/* free a symbol and its resources, or a symbol list */
 
-free_symbol(symbol)
-    struct symbol * symbol;
+void
+free_symbol(struct symbol * symbol)
 {
     free_type(symbol->type);
     free(symbol);
 }
+
+void
+free_symbol_list(struct symbol ** list)
+{
+    struct symbol * entry;
+
+    while (entry = *list) {
+        *list = entry->list;
+        free_symbol(entry);
+    }
+}
+
+/* after a function definition is completed, call free_symbols()
+   to finally clear out all the out-of-scope symbols. */
 
 static
 free_symbols1(symbol)

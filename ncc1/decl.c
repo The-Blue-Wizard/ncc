@@ -26,9 +26,8 @@
 
 /* parse type qualifiers, updating the ts bitset. */
 
-static
-qualifiers(ts)
-    int * ts;
+static void
+qualifiers(int * ts)
 {
     int t;
 
@@ -51,8 +50,11 @@ qualifiers(ts)
     }
 }
 
-static
-storage_class()
+/* read a storage class specifier, if any, and return its
+   mapped value */
+
+static int
+storage_class(void)
 {
     int ss = S_NONE;
 
@@ -379,20 +381,20 @@ type_specifier(ss)
    '*id' will be set to the identifier declared, unless 'id' is NULL, in
    which case an identifier will be prohibited (for abstract declarators).
 
-   if 'args' is not NULL, then formal arguments will be permitted. they are
-   placed in the symbol table as S_ARG at SCOPE_FUNCTION, linked together in a 
-   list. '*args' will point to the first symbol of that list. 
+   if 'old_args' is not NULL, then old-style arguments will be permitted. they are
+   placed in the symbol table as S_OLD_ARG at SCOPE_FUNCTION, linked together in a 
+   list. '*old_args' will point to the first symbol of that list. this scheme is 
+   fragile and an abuse of the symbol table, but it works because:
 
-   this scheme is fragile and an abuse of the symbol table, but it works because:
-   1. arguments are only allowed in external definitions (i.e., SCOPE_GLOBAL), 
+   1. old-style arguments are only allowed in definitions, at SCOPE_GLOBAL, 
    2. the caller will immediately enter SCOPE_FUNCTION after the declarator is read. */
 
 static struct type * direct_declarator();
 
 static struct type *
-declarator(id, args)
+declarator(id, old_args)
     struct string ** id;
-    struct symbol ** args;
+    struct symbol ** old_args;
 {
     struct type * type;
     int           t_quals = 0;
@@ -400,29 +402,110 @@ declarator(id, args)
     if (token.kk == KK_STAR) {
         lex();
         qualifiers(&t_quals);
-        type = splice_types(declarator(id, args), new_type(T_PTR | t_quals));
+        type = splice_types(declarator(id, old_args), new_type(T_PTR | t_quals));
     } else
-        type = direct_declarator(id, args);
+        type = direct_declarator(id, old_args);
 
     return type;
 }
 
+/* process a prototype argument list. returns a T_FUNC type node
+   with the 'proto' data filled in appropriately. */
+
 static struct type *
-formal_arguments(args)
-    struct symbol ** args;
+proto_arguments(void)
+{
+    struct symbol * symbol;
+    struct proto  * proto;
+    struct type   * type;
+    struct string  * id;
+    int             ss;
+
+    proto = new_proto();
+
+    match(KK_LPAREN);
+    enter_scope();
+
+    for (;;) {
+        if (token.kk == KK_ELLIP) {
+            lex();
+            proto->ps |= P_VARIADIC;
+
+            if (!proto->args) 
+                error(ERROR_VARIADIC);
+            else
+                break;
+        }
+
+        id = NULL;
+        type = type_specifier(&ss);
+
+        switch (ss) {
+        case S_NONE:
+            ss = S_LOCAL;
+            break;
+
+        case S_AUTO:
+        case S_REGISTER:
+            break;
+
+        default:
+            error(ERROR_SCLASS);
+        }
+
+        type = splice_types(declarator(&id, NULL), type);
+        validate_type(type);
+        type = argument_type(type, ARGUMENT_TYPE_NEW);
+
+        if (type->ts & T_VOID) 
+            if ((proto->args) || id) 
+                error(ERROR_ILLVOID);
+            else
+                break;
+
+        if (id) {
+            symbol = find_symbol_list(id, &proto->args);
+            if (symbol) error(ERROR_DUPARG);
+        }
+
+        symbol = new_symbol(id, ss, type);
+        put_symbol_list(symbol, &proto->args);
+
+        if (token.kk == KK_COMMA) 
+            lex();
+        else
+            break;
+    }
+
+    match(KK_RPAREN);
+    exit_scope(EXIT_SCOPE_PROTO);
+
+    type = new_type(T_FUNC);
+    type->proto = proto;
+    return type;
+}
+
+/* process an old-style function declaration. add
+   args to list headed by 'old_args', if present */
+
+static struct type *
+old_arguments(old_args)
+    struct symbol ** old_args;
 {
     struct symbol * symbol;
 
     match(KK_LPAREN);
 
     if (token.kk == KK_IDENT) {
-        if (!args) error(ERROR_NOARGS);
+        if (!old_args) error(ERROR_NOARGS);
 
         for (;;) {
             expect(KK_IDENT);
-            symbol = new_symbol(token.u.text, S_ARG, NULL);
+            symbol = find_symbol(token.u.text, S_OLD_ARG, SCOPE_FUNCTION, SCOPE_FUNCTION);
+            if (symbol) error(ERROR_DUPARG);
+            symbol = new_symbol(token.u.text, S_OLD_ARG, NULL);
             put_symbol(symbol, SCOPE_FUNCTION);
-            put_symbol_list(symbol, args);
+            put_symbol_list(symbol, old_args);
             lex();
 
             if (token.kk == KK_COMMA)
@@ -437,24 +520,24 @@ formal_arguments(args)
 }
 
 static struct type *
-direct_declarator(id, args)
+direct_declarator(id, old_args)
     struct string ** id;
-    struct symbol ** args;
+    struct symbol ** old_args;
 {
     struct type * type = NULL;
     struct type * array_type;
 
     if (token.kk == KK_LPAREN) {
-        if (peek(NULL) != KK_RPAREN) {
+        if ((peek(NULL) != KK_RPAREN) && !peek_type_specifier()) {
             lex();
-            type = declarator(id, args, NULL);
+            type = declarator(id, old_args);
             match(KK_RPAREN);
         }
     } else if (token.kk == KK_IDENT) {
         if (!id) error(ERROR_ABSTRACT);
         *id = token.u.text;
         lex();
-    } else if (id) error(ERROR_MISSING);
+    } 
 
     for (;;) {
         if (token.kk == KK_LBRACK) {
@@ -467,15 +550,20 @@ direct_declarator(id, args)
             match(KK_RBRACK);
             type = splice_types(type, array_type);
         } else if (token.kk == KK_LPAREN) {
-            type = splice_types(type, formal_arguments(type ? NULL : args));
+            if (peek_type_specifier()) {
+                /* prototype or new-style definition */
+                type = splice_types(type, proto_arguments());
+            } else {
+                /* old-style declaration or definition */
+                type = splice_types(type, old_arguments(type ? NULL : old_args));
+            }
         } else break;
     }
 
     return type;
 }
 
-/* parse an abstract type and return the resultant type.
-   abstract types only appear in K&R C in casts and sizeof(). */
+/* parse an abstract type and return the resultant type. */
 
 struct type *
 abstract_type()
@@ -490,18 +578,19 @@ abstract_type()
 }
 
 /* process a set of declarations. after each declarator is read, the declare()
-   function is invoked with as declare(ss, id, type, ptr) where:
+   function is invoked with as declare(ss, id, type, ptr, first) where:
 
    struct string * id   is the identifier declared,
    int ss               is the explicit storage class (or S_NONE),
    struct type * type   is the type declared (ownership given to declare()),
+   first                is zero if this is not the first declarator 
    
    and 'ptr' is either struct symbol *, when mode is DECLARATIONS_ARGS,
    giving the head of the formal argument list in the symbol table. otherwise
    it's char * 'data', just copied from the call to declarations().
 
    the flags are:
-   DECLARATIONS_ARGS    allow formal arguments (i.e., allow function definitions)
+   DECLARATIONS_ARGS    allow old-style arguments ( = allow function definitions)
    DECLARATIONS_INT     in the absence of any storage class or type specifier, assume 'int'
    DECLARATIONS_FIELDS  allow bit field types
 
@@ -517,7 +606,7 @@ declarations(declare, flags, data)
     struct type *   type;
     int             ss;
     struct string * id;
-    struct symbol * args;
+    struct symbol * old_args;
     int             first;
     int             bits;
 
@@ -534,13 +623,14 @@ declarations(declare, flags, data)
 
         if (token.kk != KK_SEMI) {
             for (;;) {
-                args = NULL;
+                old_args = NULL;
+                id = NULL;
 
                 if (token.kk == KK_COLON) {
-                    id = NULL;
                     type = copy_type(base);
                 } else {
-                    type = declarator(&id, ((flags & DECLARATIONS_ARGS) && first) ? &args : NULL);
+                    type = declarator(&id, ((flags & DECLARATIONS_ARGS) && first) ? &old_args : NULL);
+                    if (id == NULL) error(ERROR_MISSING);
                     type = splice_types(type, copy_type(base));
                 }
 
@@ -557,10 +647,11 @@ declarations(declare, flags, data)
 
                 validate_type(type);
                 if (type->ts & T_VOID) error(ERROR_ILLVOID);
-                first = 0;
 
-                if (declare(ss, id, type, (flags & DECLARATIONS_ARGS) ? (char *) args : data)) 
+                if (declare(ss, id, type, (flags & DECLARATIONS_ARGS) ? (char *) old_args : data, first)) 
                     goto was_definition;
+
+                first = 0;
 
                 if (token.kk == KK_COMMA)
                     lex();
@@ -611,26 +702,26 @@ declare_local(ss, id, type)
     return 0;
 }
 
-local_declarations()
+void
+local_declarations(void)
 {
     declarations(declare_local, 0);
 }
 
-/* parse a function definition. this actually encapsulates and drives
-   the entire code-generation process. */
+/* process old-style function argument type declaration */
 
 static
-declare_argument(ss, id, type, args)
+declare_argument(ss, id, type, old_args)
     struct string * id;
     struct type *   type;
-    struct symbol * args;
+    struct symbol * old_args;
 {
     struct symbol * symbol;
 
-    symbol = find_symbol_list(id, &args);
+    symbol = find_symbol_list(id, &old_args);
     if (symbol == NULL) error(ERROR_NOTARG);
     if (symbol->type) error(ERROR_REDECL);
-    symbol->type = argument_type(type);
+    symbol->type = argument_type(type, ARGUMENT_TYPE_OLD);
 
     switch (ss) 
     {
@@ -648,31 +739,52 @@ declare_argument(ss, id, type, args)
     return 0;
 }
 
-static 
-function_definition(symbol, args)
-    struct symbol * symbol;
-    struct symbol * args;
-{
-    if (symbol->ss & S_DEFINED) error(ERROR_DUPDEF);
+/* parse a function definition. this actually encapsulates 
+   and drives the entire code-generation process. */
 
+static void
+compute_offset(struct symbol * symbol)
+{
+    symbol->i = frame_offset;
+    frame_offset += size_of(symbol->type);
+    frame_offset = ROUND_UP(frame_offset, FRAME_ALIGN);
+}
+
+static void
+function_definition(struct symbol * symbol, struct symbol * old_args)
+{
+    struct symbol * arg;
+
+    if (symbol->ss & S_DEFINED) error(ERROR_DUPDEF);
     current_function = symbol;
     frame_offset = FRAME_ARGUMENTS;
-    declarations(declare_argument, 0, args);
 
-    for (symbol = args; symbol; symbol = symbol->list) {
-        if (symbol->type == NULL) {
-            symbol->type = new_type(T_INT);
-            symbol->ss = S_LOCAL;
+    if (old_args || !current_function->type->proto || (current_function->type->proto->ps & P_STALE)) {
+        /* old-style arguments */
+
+        declarations(declare_argument, 0, old_args);
+
+        for (arg = old_args; arg; arg = arg->list) {
+            if (arg->type == NULL) {
+                arg->type = new_type(T_INT);
+                arg->ss = S_LOCAL;
+            }
+            compute_offset(arg);
         }
+    } else {
+        /* new-style arguments */
 
-        symbol->i = frame_offset;
-        frame_offset += size_of(symbol->type);
-        frame_offset = ROUND_UP(frame_offset, FRAME_ALIGN);
+        for (arg = current_function->type->proto->args; arg; arg = arg->list) {
+            if (arg->id == NULL) error(ERROR_ARGNAME);
+            symbol = new_symbol(arg->id, arg->ss, copy_type(arg->type));
+            compute_offset(symbol);
+            put_symbol(symbol, SCOPE_FUNCTION);
+        }
     }
 
     frame_offset = 0;
     setup_blocks();
-    compound();         /* will enter_scope() to capture the arguments */
+    compound();         /* will enter_scope() to capture arguments at SCOPE_FUNCTION */
     optimize();
     output_function();
     free_blocks();
@@ -685,10 +797,10 @@ function_definition(symbol, args)
    source file boils down to a list of external definitions. */
 
 static
-declare_global(ss, id, type, args)
+declare_global(ss, id, type, old_args, first)
     struct string * id;
     struct type   * type;
-    struct symbol * args;
+    struct symbol * old_args;
 {
     struct symbol * symbol;
     int             effective_ss;
@@ -712,20 +824,19 @@ declare_global(ss, id, type, args)
     symbol->ss &= ~S_LURKER;
 
     if (symbol->type->ts & T_FUNC) {
-        if (args || ((token.kk != KK_COMMA) && (token.kk != KK_SEMI))) {
-            function_definition(symbol, args);
+        if (old_args || ((token.kk != KK_COMMA) && (token.kk != KK_SEMI))) {
+            if (!first) error(ERROR_SYNTAX);
+            function_definition(symbol, old_args);
             return 1;
         }
     } else
         initializer(symbol, ss);
 
-    debug_type(symbol->type);
-    fputc('\n', stderr);
-
     return 0;
 }
 
-translation_unit()
+void
+translation_unit(void)
 {
     lex();  
     declarations(declare_global, DECLARATIONS_INTS | DECLARATIONS_ARGS);
