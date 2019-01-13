@@ -32,9 +32,7 @@
 static struct string * string_buckets[NR_STRING_BUCKETS];
 
 struct string *
-stringize(data, length)
-    char * data;
-    int    length;
+stringize(char * data, int length)
 {
     struct string *  string;
     struct string ** stringp;
@@ -76,7 +74,8 @@ stringize(data, length)
 
 /* walk the string table and output all the pending string literals. */
 
-literals()
+void
+literals(void)
 {
     struct string * string;
     int             i;
@@ -92,14 +91,15 @@ literals()
 
 /* walk the symbol table and output directives for all undefined externs */
 
-externs1(symbol)
-    struct symbol * symbol;
+static void
+externs1(struct symbol * symbol)
 {
     if ((symbol->ss & S_EXTERN) && (symbol->ss & S_REFERENCED))
         output(".global %G\n", symbol);
 }
 
-externs()
+void
+externs(void)
 {
     walk_symbols(SCOPE_GLOBAL, SCOPE_GLOBAL, externs1);
 }
@@ -107,8 +107,7 @@ externs()
 /* return the symbol table entry associated with a string literal. */
 
 struct symbol *
-string_symbol(string)
-    struct string * string;
+string_symbol(struct string * string)
 {
     struct symbol * symbol;
     struct type *   type;
@@ -160,8 +159,8 @@ new_symbol(struct string * id, int ss, struct type * type)
 
 /* put the symbol in the symbol table at the specified scope level. */
 
-put_symbol(symbol, scope)
-    struct symbol * symbol;
+void
+put_symbol(struct symbol * symbol, int scope)
 {
     struct symbol ** bucketp;
 
@@ -213,8 +212,7 @@ find_symbol_list(struct string * id, struct symbol ** list)
    hide the typedef. */
 
 struct symbol *
-find_typedef(id)
-    struct string * id;
+find_typedef(struct string * id)
 {
     struct symbol * symbol;
 
@@ -229,8 +227,7 @@ find_typedef(id)
 /* find, or create, the label symbol */
 
 struct symbol *
-find_label(id)
-    struct string * id;
+find_label(struct string * id)
 {
     struct symbol * symbol;
 
@@ -249,8 +246,7 @@ find_label(id)
    specified in 'ss'. returns NULL if no symbol found. */
 
 struct symbol *
-find_symbol(id, ss, start, end)
-    struct string * id;
+find_symbol(struct string * id, int ss, int start, int end)
 {
     struct symbol * symbol;
     int             i;
@@ -273,7 +269,7 @@ find_symbol(id, ss, start, end)
    is very slow, because the symbol table isn't indexed by register. */
 
 struct symbol *
-find_symbol_by_reg(reg)
+find_symbol_by_reg(int reg)
 {
     struct symbol * symbol;
     int             i;
@@ -288,8 +284,8 @@ find_symbol_by_reg(reg)
 /* someone's interested in the memory allocated to this symbol,
    so make sure it's allocated. */
 
-store_symbol(symbol)
-    struct symbol * symbol;
+void
+store_symbol(struct symbol * symbol)
 {
     if ((symbol->ss & S_BLOCK) && (symbol->i == 0)) {
         frame_offset += size_of(symbol->type);
@@ -301,8 +297,8 @@ store_symbol(symbol)
 /* return the pseudo register associated with the symbol, allocating
    one of appropriate type, if necessary. */
 
-symbol_reg(symbol)
-    struct symbol * symbol;
+int
+symbol_reg(struct symbol * symbol)
 {
     if (symbol->reg != R_NONE) return symbol->reg;
 
@@ -323,8 +319,7 @@ symbol_reg(symbol)
    caller yields ownership of 'type'. */
 
 struct symbol *
-temporary_symbol(type)
-    struct type * type;
+temporary_symbol(struct type * type)
 {
     struct symbol * symbol;
 
@@ -336,8 +331,8 @@ temporary_symbol(type)
 /* walk the symbol table between scopes 'start' and 'end', inclusive,
    calling f() on each one. the EXTRA_BUCKET is included in the traversal. */
 
-walk_symbols(start, end, f)
-    int f();
+void
+walk_symbols(int start, int end, void (*f)(struct symbol *))
 {
     struct symbol * symbol;
     struct symbol * link;
@@ -367,17 +362,15 @@ enter_scope(void)
    (EXIT_SCOPE_PROTO). in both cases, the symbols are
    removed from view, it just depends how. */
 
-static
-exit1(symbol)
-    struct symbol * symbol;
+static void
+exit1(struct symbol * symbol)
 {
     get_symbol(symbol);
     put_symbol(symbol, SCOPE_RETIRED);
 }
 
-static
-exit2(symbol)
-    struct symbol * symbol;
+static void
+exit2(struct symbol * symbol)
 {
     get_symbol(symbol);
     symbol->ss |= S_HIDDEN;
@@ -418,15 +411,15 @@ free_symbol_list(struct symbol ** list)
 /* after a function definition is completed, call free_symbols()
    to finally clear out all the out-of-scope symbols. */
 
-static
-free_symbols1(symbol)
-    struct symbol * symbol;
+static void
+free_symbols1(struct symbol * symbol)
 {
     get_symbol(symbol);
     free_symbol(symbol);
 }
 
-free_symbols()
+void
+free_symbols(void)
 {
     walk_symbols(SCOPE_FUNCTION, SCOPE_RETIRED, free_symbols1);
 }

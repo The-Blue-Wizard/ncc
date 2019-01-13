@@ -43,6 +43,7 @@ int             next_iregister = R_IPSEUDO;
 int             next_fregister = R_FPSEUDO;
 int             current_scope = SCOPE_GLOBAL;
 struct symbol * current_function;
+struct tree   * return_struct_temp;
 int             frame_offset;
 int             save_iregs;         /* bitsets (1 << R_IDX(x)) of registers .. */
 int             save_fregs;         /* .. used in this function */
@@ -151,19 +152,16 @@ error(int code)
 
 /* a general-purpose allocation function. guarantees success. */
 
-char *
-allocate(bytes)
-    int bytes;
+void *
+allocate(int bytes)
 {
-    char * p = malloc(bytes);
-    
+    void * p = malloc(bytes);
     if (p == NULL) error(ERROR_MEMORY);
     return p;
 }
 
-
-main(argc, argv)
-    char *argv[];
+int
+main(int argc, char * argv[])
 {
     int opt;
 
@@ -202,7 +200,6 @@ main(argc, argv)
     tentatives();
     externs();
     if (blkcpy_used) output(".global blkcpy\n");
-
     fclose(output_file);
     exit(0);
 }

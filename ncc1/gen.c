@@ -29,9 +29,8 @@
    at present, that means after folding integral constants
    in E_CONs or removing elements of E_IMMs. */
 
-static
-normalize(tree)
-    struct tree * tree;
+static void
+normalize(struct tree * tree)
 {
     long  i;
     int   reg;
@@ -80,10 +79,8 @@ normalize(tree)
    this function is only called during generate_binary() but it's separated 
    because it's so messy. */
 
-static
-combine_imm(left, right)
-    struct tree * left;
-    struct tree * right;
+static int
+combine_imm(struct tree * left, struct tree * right)
 {
     int nr_regs = 0;
     int nr_scales = 0;
@@ -127,17 +124,21 @@ emit(struct insn * insn)
     put_insn(current_block, insn, NULL);
 }
 
-/* return an E_REG tree for a temporary of the given 'type'.
-   caller yields ownership of 'type'. */
+/* return a temporary tree of the given 'type'.
+   the tree will be E_REG if it's scalar, otherwise E_MEM
+   for a struct type. caller yields ownership of 'type'. */
 
-static struct tree *
-temporary(type)
-    struct type * type;
+struct tree *
+temporary(struct type * type)
 {
     struct symbol * temp;
 
     temp = temporary_symbol(copy_type(type));
-    return reg_tree(symbol_reg(temp), type);
+
+    if (type->ts & T_IS_SCALAR) 
+        return reg_tree(symbol_reg(temp), type);
+    else
+        return memory_tree(temp);
 }
 
 /* the expression is going to be used as an instruction operand,
@@ -150,8 +151,7 @@ temporary(type)
    E_REG and E_MEM are guaranteed to remain E_REG and E_MEM. */
 
 static struct tree *
-operand(tree)
-    struct tree * tree;
+operand(struct tree * tree)
 {
     struct tree * temp1;
     struct tree * temp2;
@@ -262,6 +262,7 @@ static struct
     { E_ASSIGN, T_IS_INTEGRAL | T_PTR, T_IS_INTEGRAL | T_PTR, I_MOV },
     { E_ASSIGN, T_FLOAT, T_FLOAT, I_MOVSS },
     { E_ASSIGN, T_DOUBLE | T_LDOUBLE, T_DOUBLE | T_LDOUBLE, I_MOVSD },
+    { E_ASSIGN, T_TAG, T_TAG, I_BLKCPY },
 
     { E_EQ, T_IS_INTEGRAL | T_PTR, T_IS_INTEGRAL | T_PTR, I_CMP },
     { E_EQ, T_FLOAT, T_FLOAT, I_UCOMISS },
@@ -312,9 +313,8 @@ static struct
 
 #define NR_CHOICES (sizeof(choices)/sizeof(*choices))
 
-choose(op, left, right)
-    struct tree * left;
-    struct tree * right;
+int
+choose(int op, struct tree * left, struct tree * right)
 {
     int i;
 
@@ -355,9 +355,8 @@ choose(op, left, right)
    zero, or as (2^log_2(constant))-1 is mask is non-zero. (the 
    latter value is useful for constant modulo operations.) */
 
-static
-log_2(tree, mask)
-    struct tree * tree;
+static int
+log_2(struct tree * tree, int mask)
 {
     long bit;
     int  i;
@@ -382,9 +381,7 @@ log_2(tree, mask)
    that leave a leaf on the tree and need it to be processed for 'goal'. */
 
 static struct tree *
-generate_leaf(tree, goal, cc)       /* E_NOP E_REG E_CON E_IMM E_MEM */
-    struct tree * tree;
-    int *         cc;
+generate_leaf(struct tree * tree, int goal, int * cc)       /* E_NOP E_REG E_CON E_IMM E_MEM */
 {
     struct tree * zero;
 
@@ -439,8 +436,7 @@ generate_leaf(tree, goal, cc)       /* E_NOP E_REG E_CON E_IMM E_MEM */
    ownership of 'tree' is yielded by the caller. */
 
 static struct tree *
-extract_field(tree)
-    struct tree * tree;
+extract_field(struct tree * tree)
 {
     struct tree * temp;
     int           shift = T_GET_SHIFT(tree->type->ts);
@@ -464,11 +460,8 @@ extract_field(tree)
    caller. this is meant to be called in place of generate_leaf() when storing
    a bitfield - it attempts to "optimize" based on GOAL_CC or GOAL_VALUE. */
 
-struct tree *
-insert_field(tree, value, goal, cc)
-    struct tree * tree;
-    struct tree * value;
-    int *         cc;
+static struct tree *
+insert_field(struct tree * tree, struct tree * value, int goal, int * cc)
 {
     struct tree * temp;
     struct tree * source;
@@ -516,8 +509,7 @@ insert_field(tree, value, goal, cc)
 /* load into a temporary register. tree is yielded by caller. */
 
 static struct tree *
-load(tree)
-    struct tree * tree;
+load(struct tree * tree)
 {
     struct tree * temp;
 
@@ -532,7 +524,7 @@ load(tree)
    depending on whether the given CC is true or not. */
 
 static struct tree *
-setcc(cc)
+setcc(int cc)
 {
     struct tree * temp;
 
@@ -547,9 +539,7 @@ setcc(cc)
    and the _left_ is the value of the expression. */
 
 static struct tree *
-generate_comma(tree, goal, cc)      /* E_COMMA */
-    struct tree * tree;
-    int *         cc;
+generate_comma(struct tree * tree, int goal, int * cc)      /* E_COMMA */
 {
     struct tree * left;
     struct tree * right;
@@ -560,9 +550,7 @@ generate_comma(tree, goal, cc)      /* E_COMMA */
 }
 
 static struct tree * 
-generate_logical(tree, goal, cc)    /* E_LOR E_LAND */
-    struct tree * tree;
-    int *         cc;
+generate_logical(struct tree * tree, int goal, int * cc)    /* E_LOR E_LAND */
 {
     struct tree *  left;
     struct tree *  right;
@@ -635,9 +623,7 @@ generate_logical(tree, goal, cc)    /* E_LOR E_LAND */
 }
 
 static struct tree *
-generate_ternary(tree, goal, cc)    /* E_TERN */
-    struct tree * tree;
-    int *         cc;
+generate_ternary(struct tree * tree, int goal, int * cc)    /* E_TERN */
 {
     struct tree *  left;
     struct tree *  right;
@@ -704,21 +690,19 @@ generate_ternary(tree, goal, cc)    /* E_TERN */
 }
 
 static struct tree * 
-generate_call(tree, goal, cc)       /* E_CALL */
-    struct tree * tree;
-    int *         cc;
+generate_call(struct tree * tree, int goal, int * cc)       /* E_CALL */
 {
-    struct tree * function;
-    struct tree * arguments;
-    struct tree * argument;
-    struct type * type;
-    int           reg;
-    int           stack_adjust = 0;
+    struct tree   * function;
+    struct tree   * arguments;
+    struct tree   * argument;
+    struct type   * type;
+    int             reg;
+    int             stack_adjust = 0;
+    int             argument_size;
+    struct symbol * return_struct;
 
     decap_tree(tree, &type, &function, &arguments, NULL);
     function = generate(function, GOAL_VALUE, NULL);
-
-    /* this could use some optimization, especially w/r/t float arguments */
 
     while (argument = arguments)
     {
@@ -727,28 +711,49 @@ generate_call(tree, goal, cc)       /* E_CALL */
         argument = generate(argument, GOAL_VALUE, 0);
         argument = operand(argument);
 
-        /* non-quadwords in memory must go through a temporary */
+        if (argument->type->ts & T_TAG) {
+            argument_size = size_of(argument->type);
+            argument_size = ROUND_UP(argument_size, FRAME_ALIGN);
 
-        if ((argument->op == E_MEM) && !(argument->type->ts & T_IS_QWORD))
-            argument = load(argument);
-
-        /* integer registers must be quadwords */
-
-        if ((argument->op == E_REG) && (argument->type->ts & T_IS_INTEGRAL)) {
-            free_type(argument->type);
-            argument->type = new_type(T_LONG);
-        }
-
-        /* can't push floats directly from float registers, so fake it. push everyone else. */
-
-        if ((argument->op == E_REG) && (argument->type->ts & T_IS_FLOAT)) {
-            emit(new_insn(I_SUB, reg_tree(R_SP, new_type(T_LONG)), int_tree(T_LONG, (long) FRAME_ALIGN)));
+            emit(new_insn(I_SUB, reg_tree(R_SP, new_type(T_LONG)), int_tree(T_LONG, argument_size)));
             tree = stack_tree(copy_type(argument->type), 0);
             choose(E_ASSIGN, tree, argument);
-        } else 
-            emit(new_insn(I_PUSH, argument));
+        } else {
+            /* scalar arguments */
 
-        stack_adjust += FRAME_ALIGN;
+            if ((argument->op == E_MEM) && !(argument->type->ts & T_IS_QWORD)) {
+                /* as tempting as it is to simply push memory arguments
+                   directly, if they're not quadwords then the push will
+                   access memory that doesn't belong to that object, so
+                   we have to load to a temp register. */
+
+                argument = load(argument); 
+            }
+
+            if ((argument->op == E_REG) && (argument->type->ts & T_IS_INTEGRAL)) {
+                /* we can simply force non-quadword registers to quadword type.
+                   (this includes loaded memory arguments from the previous test!)
+                   the upper bits are junk, but the caller will (should) ignore them. */
+
+                free_type(argument->type);
+                argument->type = new_type(T_LONG);
+            }
+
+            if ((argument->op == E_REG) && (argument->type->ts & T_IS_FLOAT)) {
+                /* can't push floats directly, so we have to fake it. for 
+                   calls that take more than one float argument, we should 
+                   "optimize" by consolidating the stack manipulation. */
+
+                emit(new_insn(I_SUB, reg_tree(R_SP, new_type(T_LONG)), int_tree(T_LONG, (long) FRAME_ALIGN)));
+                tree = stack_tree(copy_type(argument->type), 0);
+                choose(E_ASSIGN, tree, argument);
+            } else 
+                emit(new_insn(I_PUSH, argument));
+
+            argument_size = FRAME_ALIGN;
+        }
+
+        stack_adjust += argument_size;
     }
 
     if ((function->op == E_IMM) && function->u.mi.rip) {
@@ -757,12 +762,28 @@ generate_call(tree, goal, cc)       /* E_CALL */
         normalize(function);
     }
 
-    emit(new_insn(I_CALL, operand(function)));
+    function = operand(function);
+
+    /* if the function returns a struct, we allocate a 
+       temporary struct to hold the return value, and
+       pass its address to the function in RAX */
+
+    if (type->ts & T_TAG) {
+        return_struct = temporary_symbol(copy_type(type));
+        tree = addr_tree(memory_tree(return_struct));
+        tree = generate(tree, GOAL_VALUE, 0);
+        tree = operand(tree);
+        emit(new_insn(I_MOV, tree, reg_tree(R_AX, new_type(T_LONG))));
+    }
+
+    emit(new_insn(I_CALL, function));
     if (stack_adjust) emit(new_insn(I_ADD, reg_tree(R_SP, new_type(T_LONG)), int_tree(T_LONG, (long) stack_adjust)));
 
     if (type->ts & T_VOID) 
         tree = new_tree(E_NOP, type);
-    else {
+    else if (type->ts & T_TAG)
+        tree = memory_tree(return_struct);
+    else { 
         tree = temporary(type);
         reg = (tree->type->ts & T_IS_FLOAT) ? R_XMM0 : R_AX;
         choose(E_ASSIGN, copy_tree(tree), reg_tree(reg, copy_type(tree->type)));
@@ -772,9 +793,7 @@ generate_call(tree, goal, cc)       /* E_CALL */
 }
 
 static struct tree *
-generate_relational(tree, goal, cc) /* E_GT E_LT E_EQ E_NEQ E_GTEQ E_LTEQ */
-    struct tree * tree;
-    int *         cc;
+generate_relational(struct tree * tree, int goal, int * cc) /* E_GT E_LT E_EQ E_NEQ E_GTEQ E_LTEQ */
 {
     struct tree * left;
     struct tree * right;
@@ -848,9 +867,7 @@ generate_relational(tree, goal, cc) /* E_GT E_LT E_EQ E_NEQ E_GTEQ E_LTEQ */
 }
 
 static struct tree *
-generate_neg(tree, goal, cc)
-    struct tree * tree;
-    int *         cc;
+generate_neg(struct tree * tree, int goal, int * cc)
 {
     struct tree * temp;
 
@@ -885,9 +902,7 @@ generate_neg(tree, goal, cc)
 }
 
 static struct tree *
-generate_not(tree, goal, cc)        /* E_NOT */
-    struct tree * tree;
-    int *         cc;
+generate_not(struct tree * tree, int goal, int * cc)        /* E_NOT */
 {
     struct tree * temp;
     int           result_cc;
@@ -910,9 +925,7 @@ generate_not(tree, goal, cc)        /* E_NOT */
 }
 
 static struct tree *
-generate_com(tree, goal, cc)        /* E_COM */
-    struct tree * tree;
-    int *         cc;
+generate_com(struct tree * tree, int goal, int * cc)        /* E_COM */
 {
     struct tree * temp;
 
@@ -938,9 +951,7 @@ generate_com(tree, goal, cc)        /* E_COM */
 
 
 static struct tree *
-generate_cast(tree, goal, cc)       /* E_CAST */
-    struct tree * tree;
-    int *         cc;
+generate_cast(struct tree * tree, int goal, int * cc)       /* E_CAST */
 {
     struct type * target_type;
     double        f;
@@ -1013,9 +1024,7 @@ generate_cast(tree, goal, cc)       /* E_CAST */
    don't get a register back. */
 
 static struct tree *
-generate_addr(tree, goal, cc)       /* E_ADDR */
-    struct tree * tree;
-    int *         cc;
+generate_addr(struct tree * tree, int goal, int * cc)       /* E_ADDR */
 {
     struct symbol * symbol;
     struct type *   type;
@@ -1050,9 +1059,7 @@ generate_addr(tree, goal, cc)       /* E_ADDR */
        flag is non-zero. */
 
 static struct tree *
-generate_fetch(tree, goal, cc, lvalue)      /* E_FETCH */
-    struct tree * tree;
-    int *         cc;
+generate_fetch(struct tree * tree, int goal, int * cc, int lvalue)      /* E_FETCH */
 {
     struct type * type;
     struct tree * temp;
@@ -1096,9 +1103,7 @@ generate_fetch(tree, goal, cc, lvalue)      /* E_FETCH */
 }
 
 static struct tree *
-generate_assign(tree, goal, cc)     /* E_ASSIGN */
-    struct tree * tree;
-    int *         cc;
+generate_assign(struct tree * tree, int goal, int * cc)     /* E_ASSIGN */
 {
     struct tree * left;
     struct tree * right;
@@ -1114,7 +1119,7 @@ generate_assign(tree, goal, cc)     /* E_ASSIGN */
 
         if (left->type->ts & T_TAG) {
             if ((left->op != E_MEM) || (right->op != E_MEM)) error(ERROR_INTERNAL);
-            emit(new_insn(I_BLKCPY, copy_tree(left), right, int_tree(T_INT, size_of(left->type))));
+            choose(E_ASSIGN, copy_tree(left), right);
             return generate_leaf(left, goal, cc);
         } else {
             if ((left->op == E_MEM) && (right->op == E_MEM)) right = load(right);
@@ -1128,9 +1133,7 @@ generate_assign(tree, goal, cc)     /* E_ASSIGN */
 /* E_SYM nodes are turned into E_REG (scalars) or E_MEM nodes. */
 
 static struct tree *
-generate_sym(tree, goal, cc)        /* E_SYM */
-    struct tree * tree;
-    int *         cc;
+generate_sym(struct tree * tree, int goal, int * cc)        /* E_SYM */
 {
     struct symbol * symbol;
 
@@ -1157,10 +1160,7 @@ generate_sym(tree, goal, cc)        /* E_SYM */
    of the result, it will set 'result_cc' accordingly. otherwise it is untouched. */
 
 static struct tree *
-divmod(op, left, right, result_cc)
-    struct tree * left;
-    struct tree * right;
-    int *         result_cc;
+divmod(int op, struct tree * left, struct tree * right, int * result_cc)
 {
     struct tree * r_ax;
     struct tree * r_dx;
@@ -1228,9 +1228,7 @@ divmod(op, left, right, result_cc)
 }
 
 static struct tree *
-generate_binary(tree, goal, cc)        /* E_ADD E_SUB E_MUL E_MOD E_DIV E_SHR E_SHL E_AND E_OR E_XOR */
-    struct tree * tree;
-    int *         cc;
+generate_binary(struct tree * tree, int goal, int * cc)  /* E_ADD E_SUB E_MUL E_MOD E_DIV E_SHR E_SHL E_AND E_OR E_XOR */
 {
     struct tree * left;
     struct tree * right;
@@ -1555,10 +1553,8 @@ generate_binary(tree, goal, cc)        /* E_ADD E_SUB E_MUL E_MOD E_DIV E_SHR E_
 }
 
 static struct tree *
-generate_assop(tree, goal, cc)      /* E_ADDASS E_SUBASS E_MULASS E_DIVASS E_SHLASS E_SHRASS */
-    struct tree * tree;             /* E_ANDASS E_ORASS E_XORASS */
-    int *         cc;
-{
+generate_assop(struct tree * tree, int goal, int * cc)      /* E_ADDASS E_SUBASS E_MULASS E_DIVASS E_SHLASS E_SHRASS */
+{                                                           /* E_ANDASS E_ORASS E_XORASS */
     struct tree * left;
     struct tree * right;
     struct tree * temp;
@@ -1642,10 +1638,8 @@ generate_assop(tree, goal, cc)      /* E_ADDASS E_SUBASS E_MULASS E_DIVASS E_SHL
     return generate_leaf(left, goal, cc);
 }
 
-struct tree *
-generate_prepost(tree, goal, cc)        /* E_POST E_PRE */
-    struct tree * tree;
-    int *         cc;
+static struct tree *
+generate_prepost(struct tree * tree, int goal, int * cc)        /* E_POST E_PRE */
 {
     struct tree * copy;
     struct tree * temp;
@@ -1692,9 +1686,7 @@ generate_prepost(tree, goal, cc)        /* E_POST E_PRE */
    if GOAL_CC isn't specified, 'cc' isn't used and can/should be NULL. */
 
 struct tree *
-generate(tree, goal, cc)
-    struct tree * tree;
-    int *         cc;
+generate(struct tree * tree, int goal, int * cc)
 {
     switch (tree->op)
     {

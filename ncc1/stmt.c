@@ -171,7 +171,11 @@ return_statement(void)
     if (token.kk != KK_SEMI) {
         if (return_type->ts & T_VOID)
             error(ERROR_RETURN);
-        else if (return_type->ts & T_IS_FLOAT) 
+
+        if (return_type->ts & T_TAG) {
+            tree = copy_tree(return_struct_temp);
+            tree = new_tree(E_FETCH, copy_type(tree->type->next), tree);
+        } else if (return_type->ts & T_IS_FLOAT) 
             tree = reg_tree(R_XMM0, copy_type(return_type));
         else
             tree = reg_tree(R_AX, copy_type(return_type));
@@ -242,6 +246,14 @@ compound(void)
 {
     enter_scope();
     match(KK_LBRACE);
+
+    /* if we're entering function scope and the function returns
+       a struct/union, we need to save the return-struct pointer
+       (which is passed by the caller in RAX) first */
+
+    if ((current_scope == SCOPE_FUNCTION) && return_struct_temp) 
+        choose(E_ASSIGN, copy_tree(return_struct_temp), reg_tree(R_AX, new_type(T_LONG)));
+
     local_declarations();
     while (token.kk != KK_RBRACE) statement();
     match(KK_RBRACE);

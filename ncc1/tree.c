@@ -24,11 +24,13 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include "ncc1.h"
 
 /* constant expressions must evaluate to an int */
 
-constant_expression()
+int
+constant_expression(void)
 {
     struct tree * tree;
     long          value;
@@ -46,13 +48,10 @@ constant_expression()
    three children. the ownership of 'type' is taken by the node. */
 
 struct tree *
-new_tree(op, type, ch0, ch1, ch2)
-    struct type * type;
-    struct tree * ch0;
-    struct tree * ch1;
-    struct tree * ch2;
+new_tree(int op, struct type * type, ...)
 {
     struct tree * tree;
+    va_list       args;
 
     tree = (struct tree *) allocate(sizeof(struct tree));
     tree->op = op;
@@ -82,9 +81,11 @@ new_tree(op, type, ch0, ch1, ch2)
             break;
         }
     } else {
-        tree->u.ch[0] = E_HAS_CH0(op) ? ch0 : NULL;
-        tree->u.ch[1] = E_HAS_CH1(op) ? ch1 : NULL;
-        tree->u.ch[2] = E_HAS_CH2(op) ? ch2 : NULL;
+        va_start(args, type);
+        tree->u.ch[0] = E_HAS_CH0(op) ? va_arg(args, struct tree *) : NULL;
+        tree->u.ch[1] = E_HAS_CH1(op) ? va_arg(args, struct tree *) : NULL;
+        tree->u.ch[2] = E_HAS_CH2(op) ? va_arg(args, struct tree *) : NULL;
+        va_end(args);
     }
 
     return tree;
@@ -112,12 +113,8 @@ free_tree(struct tree * tree)
    to the caller, if it expresses interest by passing in valid pointers to
    capture them. then the top of the tree is freed. */
 
-decap_tree(tree, type, ch0, ch1, ch2)
-    struct tree *  tree;
-    struct type ** type;
-    struct tree ** ch0;
-    struct tree ** ch1;
-    struct tree ** ch2;
+void
+decap_tree(struct tree * tree, struct type ** type, struct tree ** ch0, struct tree ** ch1, struct tree ** ch2)
 {
     if (type) { 
         *type = tree->type;
@@ -185,8 +182,7 @@ symbol_tree(symbol)
 /* return an E_REG tree. takes ownership of 'type'. */
 
 struct tree *
-reg_tree(reg, type)
-    struct type * type;
+reg_tree(int reg, struct type * type)
 {
     struct tree * tree;
 
@@ -202,8 +198,7 @@ reg_tree(reg, type)
    for S_STATIC or S_EXTERN symbols, this will yield [RIP x]. */
 
 struct tree * 
-memory_tree(symbol)
-    struct symbol * symbol;
+memory_tree(struct symbol * symbol)
 {
     struct tree * tree;
 
@@ -224,9 +219,7 @@ memory_tree(symbol)
 /* int_tree(), float_tree() are convenience functions */
 
 struct tree *
-int_tree(ts, i)
-    int  ts;
-    long i;
+int_tree(int ts, long i)
 {
     struct tree * tree;
 
@@ -236,9 +229,7 @@ int_tree(ts, i)
 }
 
 struct tree *
-float_tree(ts, f)
-    int        ts;
-    double     f;
+float_tree(int ts, double f)
 {
     struct tree * tree;
 
@@ -251,8 +242,7 @@ float_tree(ts, f)
    as usual, the caller yields ownership of the 'type'. */
 
 struct tree *
-stack_tree(type, offset)
-    struct type * type;
+stack_tree(struct type * type, int offset)
 {
     struct tree * tree;
 
@@ -266,8 +256,7 @@ stack_tree(type, offset)
 /* take the address of the tree. obviously must be an lvalue. */
 
 struct tree *
-addr_tree(tree)
-    struct tree * tree;
+addr_tree(struct tree * tree)
 {
     if ((tree->op == E_SYM) && (tree->u.sym->ss & S_LOCAL)) {
         tree->u.sym->ss &= ~S_LOCAL;
@@ -279,8 +268,8 @@ addr_tree(tree)
 
 /* send tree to work .. (paying attention?) */
 
-commute_tree(tree)
-    struct tree * tree;
+void
+commute_tree(struct tree * tree)
 {
     struct tree * tmp;
 
@@ -292,9 +281,8 @@ commute_tree(tree)
 /* lvalues are either symbols or indirections. the front end 
    will even generate an E_REG node in return_statement(). */
 
-static
-lvalue(tree)
-    struct tree * tree;
+static void
+lvalue(struct tree * tree)
 {
     if ((tree->op != E_SYM) && (tree->op != E_FETCH) && (tree->op != E_REG))
         error(ERROR_LVALUE);
@@ -307,8 +295,7 @@ lvalue(tree)
    3. convert function to pointer-to-function. */
 
 static struct tree *
-promote(tree)
-    struct tree * tree;
+promote(struct tree * tree)
 {
     struct type * type;
 
@@ -329,8 +316,7 @@ promote(tree)
 /* make sure the tree is a scalar */
 
 struct tree *
-scalar_expression(tree)
-    struct tree * tree;
+scalar_expression(struct tree * tree)
 {
     if (!(tree->type->ts & T_IS_SCALAR)) tree = promote(tree);
     if (!(tree->type->ts & T_IS_SCALAR)) error(ERROR_SCALAR);
@@ -345,9 +331,8 @@ scalar_expression(tree)
    
    this function requires that the bits in type.h T_* be correctly ordered. */
 
-static
-usuals(tree)
-    struct tree * tree;
+static void
+usuals(struct tree * tree)
 {
     struct tree * left = tree->u.ch[0];
     struct tree * right = tree->u.ch[1];
@@ -387,8 +372,7 @@ usuals(tree)
    the tree to account for pointer scaling. */
 
 static struct tree *
-scale_pointers(tree)
-    struct tree * tree;
+scale_pointers(struct tree * tree)
 {
     long scale_factor; /* long to avoid casts to int_tree() */
 
@@ -478,9 +462,8 @@ void_pointer(tree, type, mode)
 /* check that 'left' and 'right' types are acceptable to binary operator 'op'.
    note that null_pointer() must be called (if allowed/necessary) before this. */
 
-check_operand_types(op, left, right)
-    struct type * left;
-    struct type * right;
+static void
+check_operand_types(int op, struct type * left, struct type * right)
 {
     if ((op != E_LOR) && (op != E_LAND) && (left->ts & right->ts & T_PTR))
         compat_types(left, right, (op == E_ASSIGN) ? COMPAT_TYPES_ASSIGN : 0);
@@ -508,7 +491,8 @@ check_operand_types(op, left, right)
     case E_TERN:
         if (    (!(left->ts & T_IS_ARITH) || !(right->ts & T_IS_ARITH))
             &&  (!(left->ts & right->ts & T_PTR)) 
-            &&  (!(left->ts & right->ts & T_VOID)))
+            &&  (!(left->ts & right->ts & T_VOID))
+            &&  (!((left->ts & right->ts & T_TAG) && (left->tag == right->tag))))
         {
             error(ERROR_INCOMPAT);
         } else
@@ -778,7 +762,6 @@ old_actual_arguments(struct tree * tree)
         if (argument->type->ts & T_FLOAT)
             argument = new_tree(E_CAST, new_type(T_DOUBLE), argument);
 
-        if (argument->type->ts & T_TAG) error(ERROR_STRUCT);
         if (argument->type->ts & T_VOID) error(ERROR_ILLVOID);
 
         argument->list = tree->u.ch[1];
@@ -1156,8 +1139,8 @@ static char *trees[] = {
     /* 45 */    "TERN"
 };
 
-debug_tree(tree)
-    struct tree * tree;
+void
+debug_tree(struct tree * tree)
 {
     int i;
 

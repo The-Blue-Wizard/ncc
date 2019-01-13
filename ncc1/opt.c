@@ -30,8 +30,8 @@
    abandon with which the parser generates empty blocks. as such,
    it's run whether -O is given or not. */
 
-static
-jumps()
+static void
+jumps(void)
 {
     struct block * block;
     struct block * successor;
@@ -64,8 +64,8 @@ jumps()
    we never remove the entry or exit blocks. like jumps(), this
    is run whether -O is given or not, and for the same reason. */
 
-static
-unreachable()
+static void
+unreachable(void)
 {
     struct block * block;
     struct block * successor;
@@ -88,9 +88,8 @@ unreachable()
 
 /* convert S_LOCALs to S_REGISTER. error on any undefined labels. */
 
-static
-walk1(symbol)
-    struct symbol * symbol;
+static void
+walk1(struct symbol * symbol)
 {
     if (symbol->ss & S_LOCAL) {
         symbol->ss &= ~S_LOCAL;
@@ -103,8 +102,8 @@ walk1(symbol)
 
 /* generate function prologue and epilogue in entry and exit blocks */
 
-static
-logues()
+static void
+logues(void)
 {
     struct tree   * reg;
     int             i;
@@ -148,9 +147,8 @@ logues()
 
 /* peephole optimizations */
 
-static
-peeps(block)
-    struct block * block;
+static int
+peeps(struct block * block)
 {
     struct insn * insn;
 
@@ -181,9 +179,8 @@ peeps(block)
    these aren't processed until the last minute because they 
    have the potential to obscure other optimizations. */
 
-static
-subs(block)
-    struct block * block;
+static void
+subs(struct block * block)
 {
     struct insn * insn;
     int           i;
@@ -244,9 +241,8 @@ subs(block)
 /* reminder to do a limited local form of register coalescing 
    to, among other things, clean up the code generator temps */
 
-static
-coalesce(block)
-    struct block * block;
+static int
+coalesce(struct block * block)
 {  
     return 0;
 }
@@ -255,9 +251,8 @@ coalesce(block)
    only DEFs a register whose value is never used, and
    has no other side effects, is dead code. */
 
-static 
-dead_stores(block)
-    struct block * block;
+static int
+dead_stores(struct block * block)
 {
     struct insn * insn;
     struct insn * next;
@@ -292,9 +287,8 @@ dead_stores(block)
    in subsequent insns, but we don't yet. for now, the data is only used
    to eliminate jumps. see end of loop. */ 
 
-static
-con_prop(block)
-    struct block * block;
+static int
+con_prop(struct block * block)
 {
     struct insn    * insn;
     int             i;
@@ -374,7 +368,7 @@ con_prop(block)
 struct optimizer
 {
     int     level;
-    int ( * func ) ();
+    int ( * func ) (struct block *);
 } optimizers[] = {
     { 1, peeps },       /* order needs to be thought out */
     { 1, coalesce },
@@ -387,7 +381,8 @@ struct optimizer
 /* optimize() is a bit of a misnomer. it doesn't just handle 
    optimization - it drives the whole code generation process. */
 
-optimize()
+void
+optimize(void)
 {   
     struct block * block;
     int            again;
@@ -396,7 +391,6 @@ optimize()
 
     succeed_block(current_block, CC_ALWAYS, exit_block);
     walk_symbols(SCOPE_FUNCTION, SCOPE_RETIRED, walk1);
-    frame_offset = ROUND_UP(frame_offset, FRAME_ALIGN);
 
     /* optimize in a loop until no more optimizations are done.
        each local optimization function will return non-zero if
@@ -434,5 +428,6 @@ optimize()
     }
 
     allocate_regs();
+    frame_offset = ROUND_UP(frame_offset, FRAME_ALIGN);
     logues();
 }

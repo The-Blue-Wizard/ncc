@@ -24,6 +24,8 @@
 
 #include "ncc1.h"
 
+static void declarations(int (*)(int, struct string *, struct type *, void *, int), int, void *);
+
 /* parse type qualifiers, updating the ts bitset. */
 
 static void
@@ -74,17 +76,15 @@ storage_class(void)
    struct tags are distinct from union tags, and each struct/union
    constitutes an independent namespace for its members. */
 
-static 
-declare_member(ss, id, type, tag)
-    struct string * id;
-    struct type *   type;
-    struct symbol * tag;
+static int
+declare_member(int ss, struct string * id, struct type * type, void * data, int first)
 {
     int             align_bytes = align_of(type);
     int             type_bits = size_of(type) * BITS;
     long            offset_bits; /* long to catch overflows */
     struct symbol * member;
     int             member_bits;
+    struct symbol * tag = data;
 
     if (ss) error(ERROR_SCLASS);
 
@@ -389,12 +389,10 @@ type_specifier(ss)
    1. old-style arguments are only allowed in definitions, at SCOPE_GLOBAL, 
    2. the caller will immediately enter SCOPE_FUNCTION after the declarator is read. */
 
-static struct type * direct_declarator();
+static struct type * direct_declarator(struct string **, struct symbol **);
 
 static struct type *
-declarator(id, old_args)
-    struct string ** id;
-    struct symbol ** old_args;
+declarator(struct string ** id, struct symbol ** old_args)
 {
     struct type * type;
     int           t_quals = 0;
@@ -520,9 +518,7 @@ old_arguments(old_args)
 }
 
 static struct type *
-direct_declarator(id, old_args)
-    struct string ** id;
-    struct symbol ** old_args;
+direct_declarator(struct string ** id, struct symbol ** old_args)
 {
     struct type * type = NULL;
     struct type * array_type;
@@ -566,7 +562,7 @@ direct_declarator(id, old_args)
 /* parse an abstract type and return the resultant type. */
 
 struct type *
-abstract_type()
+abstract_type(void)
 {
     struct type * type;
 
@@ -598,9 +594,8 @@ abstract_type()
    for struct/union member declarations. all other callers set flags to 0.
  */
 
-declarations(declare, flags, data)
-    int    declare();
-    char * data;
+static void
+declarations(int (*declare)(int, struct string *, struct type *, void *, int), int flags, void * data)
 {
     struct type *   base;
     struct type *   type;
@@ -669,10 +664,8 @@ declarations(declare, flags, data)
 
 /* parse the top-of-block declarations that are local in scope. */
 
-static
-declare_local(ss, id, type)
-    struct string * id;
-    struct type *   type;
+static int 
+declare_local(int ss, struct string * id, struct type * type, void * data, int first)
 {
     struct symbol * symbol;
 
@@ -705,18 +698,16 @@ declare_local(ss, id, type)
 void
 local_declarations(void)
 {
-    declarations(declare_local, 0);
+    declarations(declare_local, 0, NULL);
 }
 
 /* process old-style function argument type declaration */
 
-static
-declare_argument(ss, id, type, old_args)
-    struct string * id;
-    struct type *   type;
-    struct symbol * old_args;
+static int
+declare_argument(int ss, struct string * id, struct type * type, void * data, int first)
 {
     struct symbol * symbol;
+    struct symbol * old_args = data;
 
     symbol = find_symbol_list(id, &old_args);
     if (symbol == NULL) error(ERROR_NOTARG);
@@ -759,6 +750,14 @@ function_definition(struct symbol * symbol, struct symbol * old_args)
     current_function = symbol;
     frame_offset = FRAME_ARGUMENTS;
 
+    /* if the function returns a struct, the caller will pass in a
+       pointer to the struct, and we stash it in an unnamed temporary. */
+
+    if (current_function->type->next->ts & T_TAG) 
+        return_struct_temp = temporary(splice_types(new_type(T_PTR), copy_type(current_function->type->next)));
+    else
+        return_struct_temp = NULL;
+
     if (old_args || !current_function->type->proto || (current_function->type->proto->ps & P_STALE)) {
         /* old-style arguments */
 
@@ -796,14 +795,12 @@ function_definition(struct symbol * symbol, struct symbol * old_args)
 /* translation_unit() is the goal symbol of the parser. a C
    source file boils down to a list of external definitions. */
 
-static
-declare_global(ss, id, type, old_args, first)
-    struct string * id;
-    struct type   * type;
-    struct symbol * old_args;
+static int
+declare_global(int ss, struct string * id, struct type * type, void * data, int first)
 {
     struct symbol * symbol;
     int             effective_ss;
+    struct symbol * old_args = data;
 
     if (ss & (S_AUTO | S_REGISTER)) error(ERROR_SCLASS);
     effective_ss = (ss == S_NONE) ? S_EXTERN : ss;
@@ -839,6 +836,6 @@ void
 translation_unit(void)
 {
     lex();  
-    declarations(declare_global, DECLARATIONS_INTS | DECLARATIONS_ARGS);
+    declarations(declare_global, DECLARATIONS_INTS | DECLARATIONS_ARGS, NULL);
     expect(KK_NONE);
 }

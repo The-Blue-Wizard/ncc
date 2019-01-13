@@ -28,8 +28,7 @@
    an anonymous, static symbol in the text segment. */
 
 struct tree *
-float_literal(tree)
-    struct tree * tree;
+float_literal(struct tree * tree)
 {
     struct symbol * symbol;
 
@@ -44,9 +43,8 @@ float_literal(tree)
 
 /* this function tracks state to achieve bit granularity in initializer output. */
 
-static 
-initialize_bits(i, n)
-    long i;
+static void
+initialize_bits(long i, int n)
 {
     static char buf;
     static char pos;
@@ -65,14 +63,13 @@ initialize_bits(i, n)
     }
 }
 
-static initialize();
+static void initialize(struct type *, int);
 
 /* read one scalar value and output it to the current 
    position in the data segment. 'type' is NOT consumed. */
 
-static
-initialize_scalar(type, outermost)
-    struct type * type;
+static void
+initialize_scalar(struct type * type, int outermost)
 {
     struct symbol * symbol;
     struct tree *   tree;
@@ -109,9 +106,8 @@ initialize_scalar(type, outermost)
     if (braced) match(KK_RBRACE);
 }
 
-static
-initialize_array(type, outermost)
-    struct type * type;
+static void
+initialize_array(struct type * type, int outermost)
 {
     struct type * element_type;
     int           nr_elements = 0;
@@ -155,9 +151,8 @@ initialize_array(type, outermost)
         output(" .fill %d,0\n", (type->nr_elements - nr_elements) * size_of(element_type));
 }
 
-static 
-initialize_struct(type, outermost)
-    struct type * type;
+static void
+initialize_struct(struct type * type, int outermost)
 {
     struct symbol * member;
     int             offset_bits = 0;
@@ -201,9 +196,8 @@ initialize_struct(type, outermost)
     if (adjust_bits / BITS) output(" .fill %d,0\n", adjust_bits / 8);
 }
 
-static
-initialize(type, outermost)
-    struct type * type;
+static void
+initialize(struct type * type, int outermost)
 {
     if (type->ts & T_IS_SCALAR)
         initialize_scalar(type, outermost);
@@ -217,8 +211,8 @@ initialize(type, outermost)
 
 /* issue a zero initialization for the given symbol. */
 
-bss(symbol)
-    struct symbol * symbol;
+static void
+bss(struct symbol * symbol)
 {
     output(".bss %G,%d,%d\n", symbol, size_of(symbol->type), align_of(symbol->type));
     symbol->ss &= ~S_TENTATIVE;
@@ -228,9 +222,8 @@ bss(symbol)
 /* walk the symbol table and convert tentative definitions
    into actual definitions. */
 
-static
-tentative1(symbol)
-    struct symbol * symbol;
+static void
+tentative1(struct symbol * symbol)
 {
     if (symbol->ss & S_TENTATIVE) {
         if (complete_type(symbol->type)) {
@@ -243,7 +236,8 @@ tentative1(symbol)
     }
 }
 
-tentatives()
+void
+tentatives(void)
 {
     walk_symbols(SCOPE_GLOBAL, SCOPE_GLOBAL, tentative1);
 }
@@ -253,12 +247,13 @@ tentatives()
    implicit 'extern'). the job of initializer() is to process an 
    initializer, if present, or reserve uninitialized storage instead. */
 
-initializer(symbol, ss)
-    struct symbol * symbol;
+void
+initializer(struct symbol * symbol, int ss)
 {
-    struct tree *  tree;
-    struct block * saved_block;
-    int            braced = 0;
+    struct tree   * tree;
+    struct block  * saved_block;
+    int             braced = 0;
+    struct symbol * temp;
 
     if (symbol->ss & S_BLOCK) size_of(symbol->type);
 
@@ -297,12 +292,23 @@ initializer(symbol, ss)
                 lex();
             }
 
-            if (symbol->ss & S_TYPEDEF) error(ERROR_BADINIT);
-            if (ss & S_EXTERN) error(ERROR_BADINIT);
-            if (!(symbol->type->ts & T_IS_SCALAR)) error(ERROR_BADINIT);
-            tree = symbol_tree(symbol);
-            tree = assignment_expression(tree, ASSIGNMENT_CONST);
-            generate(tree, GOAL_EFFECT, NULL);
+            if (    (symbol->ss & S_TYPEDEF)
+                ||  (ss & S_EXTERN) 
+                ||  !(symbol->type->ts & (T_IS_SCALAR | T_TAG))) 
+            {
+                error(ERROR_BADINIT);
+            }
+
+            if ((symbol->type->ts & T_TAG) && braced) {
+                temp = new_symbol(NULL, S_STATIC, copy_type(symbol->type));
+                put_symbol(temp, SCOPE_RETIRED);
+
+            } else {
+                tree = symbol_tree(symbol);
+                tree = assignment_expression(tree, ASSIGNMENT_CONST);
+                generate(tree, GOAL_EFFECT, NULL);
+            }
+
             if (braced) match(KK_RBRACE);
         }
     }

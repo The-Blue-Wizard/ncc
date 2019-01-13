@@ -233,9 +233,10 @@ output(char * fmt, ...)
 /* emit assembler directive to select the appropriate
    SEGMENT_*, if not already selected */
 
-segment(new)
+void
+segment(int new)
 {
-    static int    current = -1;
+    static int current = -1;
 
     if (new != current) {
         output("%s\n", (new == SEGMENT_TEXT) ? ".text" : ".data");
@@ -248,8 +249,8 @@ segment(new)
    and emitted a label, if necessary. if 'length' exceeds the 
    length of the string, the output is padded with zeroes. */
 
-output_string(string, length)
-    struct string * string;
+void
+output_string(struct string * string, int length)
 {
     int i = 0;
 
@@ -301,20 +302,17 @@ blkcpy(struct insn * insn)
 {
     blkcpy_used = 1;
 
-    output(" ; BLKCPY %O, %O, %O\n", insn->operand[0], insn->operand[1], insn->operand[2]);
-    output(" lea rax, %O\n", insn->operand[0]);
-    output(" lea rdx, %O\n", insn->operand[1]);
-    output(" mov ecx, %O\n", insn->operand[2]);
-    output(" call blkcpy\n");
-    output(" ; END BLKCPY");
+    output(" lea rax, qword %O ; blkcpy\n", insn->operand[0]);
+    output(" lea rdx, qword %O\n", insn->operand[1]);
+    output(" mov ecx, %d\n", size_of(insn->operand[0]->type));
+    output(" call blkcpy");
 }
 
 /* output a block. the main task of this function is to output the 
    instructions -- a simple task. the debugging data is most of the work! */
 
-static 
-output_block1(block, du)
-    struct block * block;
+static void
+output_block1(struct block * block, int du)
 {
     struct defuse * defuse;
     
@@ -339,8 +337,8 @@ output_block1(block, du)
     }
 }
 
-output_block(block)
-    struct block * block;
+static void
+output_block(struct block * block)
 {
     struct insn * insn;
     int           i;
@@ -398,7 +396,8 @@ output_block(block)
    the main task of this function is to glue the successive blocks together with
    appropriate jump instructions, which is surprisingly tedious. */
 
-output_function()
+void
+output_function(void)
 {
     struct block * block;
     struct block * successor1;

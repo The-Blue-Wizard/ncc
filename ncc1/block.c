@@ -23,15 +23,14 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 #include <stdlib.h>
+#include <stdarg.h>
 #include "ncc1.h"
 
 /* place a block on the master list before another block.
    if 'before' is NULL, the block goes at the end. */
 
-static
-put_block(block, before)
-    struct block * block;
-    struct block * before;
+static void
+put_block(struct block * block, struct block * before)
 {
     block->next = before;
 
@@ -51,9 +50,8 @@ put_block(block, before)
 
 /* remove a block from the master list. */
 
-static
-get_block(block)
-    struct block * block;
+static void
+get_block(struct block * block)
 {
     if (block->next)
         block->next->previous = block->previous;
@@ -69,7 +67,7 @@ get_block(block)
 /* create a new, empty block, and place it on the end of the master list. */
 
 struct block *
-new_block()
+new_block(void)
 {
     struct block * block;
     int            i;
@@ -100,9 +98,8 @@ new_block()
    we allow a caller to invoke this with CC_NEVER, but take no action.
    this eliminates special cases in the parser. */
 
-succeed_block(block, cc, successor)
-    struct block * block;
-    struct block * successor;
+void
+succeed_block(struct block * block, int cc, struct block * successor)
 {
     struct block_list * list;
 
@@ -125,8 +122,8 @@ succeed_block(block, cc, successor)
 
 /* undo the work of succeed_block() */
 
-unsucceed_block(block, n)
-    struct block * block;
+void
+unsucceed_block(struct block * block, int n)
 {
     struct block       * successor;
     struct block_list ** listp;
@@ -151,8 +148,7 @@ unsucceed_block(block, n)
 /* return the 'n'th successor or predecessor of 'block', or NULL. */
 
 static struct block *
-cessor1(list, n)
-    struct block_list * list;
+cessor1(struct block_list * list, int n)
 {
     while (n-- && list) list = list->link;
 
@@ -163,23 +159,21 @@ cessor1(list, n)
 }
 
 struct block *
-block_successor(block, n)
-    struct block * block;
+block_successor(struct block * block, int n)
 {
     return cessor1(block->successors, n);
 }
 
 struct block *
-block_predecessor(block, n)
-    struct block * block;
+block_predecessor(struct block * block, int n)
 {
     return cessor1(block->predecessors, n);
 }
 
 /* return the condition require to succeed from block to successor n. */
 
-block_successor_cc(block, n)
-    struct block * block;
+int
+block_successor_cc(struct block * block, int n)
 {
     struct block_list * list;
 
@@ -191,7 +185,8 @@ block_successor_cc(block, n)
 /* called before the first statement of a function definition is parsed
    to set up the initial block structure (entry, exit, and current). */
 
-setup_blocks()
+void
+setup_blocks(void)
 {
     entry_block = new_block();
     exit_block = new_block();
@@ -199,10 +194,57 @@ setup_blocks()
     succeed_block(entry_block, CC_ALWAYS, current_block);
 }
 
+/* free all the def/use information associated with a block. */
+
+static void
+free_defuses(struct block * block)
+{
+    struct defuse * defuse;
+    struct defuse * tmp;
+
+    for (defuse = block->defuses; defuse; defuse = tmp) {
+        tmp = defuse->link;
+        free(defuse);
+    }
+
+    block->defuses = NULL;
+}
+
+/* free an instruction and its operands */
+
+static void
+free_insn(struct insn * insn)
+{
+    int i;
+
+    for (i = 0; i < I_NR_OPERANDS(insn->opcode); i++)
+        free_tree(insn->operand[i]);
+
+    free(insn);
+}
+
+/* remove an instruction from its block */
+
+static void
+get_insn(struct block * block, struct insn * insn)
+{
+    if (insn->next)
+        insn->next->previous = insn->previous;
+    else
+        block->last_insn = insn->previous;
+
+    if (insn->previous)
+        insn->previous->next = insn->next;
+    else
+        block->first_insn = insn->next;
+
+    block->nr_insns--;
+}
+
 /* free a block and all its resources. */
 
-free_block(block)
-    struct block * block;
+void
+free_block(struct block * block)
 {
     struct block_list * list;
     struct insn *       insn;
@@ -230,7 +272,8 @@ free_block(block)
 
 /* called after code generation is complete */
 
-free_blocks()
+void
+free_blocks(void)
 {
     while (first_block) free_block(first_block);
 
@@ -243,44 +286,30 @@ free_blocks()
    of the operand trees is yielded by the caller. */
 
 struct insn *
-new_insn(opcode, operand0, operand1, operand2)
-    struct tree * operand0;
-    struct tree * operand1;
-    struct tree * operand2;
+new_insn(int opcode, ...)
 {
     struct insn * insn;
+    va_list       args;
 
+    va_start(args, opcode);
     insn = (struct insn *) allocate(sizeof(struct insn));
     insn->opcode = opcode;
-    insn->operand[0] = (I_NR_OPERANDS(opcode) >= 1) ? operand0 : NULL;
-    insn->operand[1] = (I_NR_OPERANDS(opcode) >= 2) ? operand1 : NULL;
-    insn->operand[2] = (I_NR_OPERANDS(opcode) >= 3) ? operand2 : NULL;
+    insn->operand[0] = (I_NR_OPERANDS(opcode) >= 1) ? va_arg(args, struct tree *) : NULL;
+    insn->operand[1] = (I_NR_OPERANDS(opcode) >= 2) ? va_arg(args, struct tree *) : NULL;
+    insn->operand[2] = (I_NR_OPERANDS(opcode) >= 3) ? va_arg(args, struct tree *) : NULL;
     insn->next = NULL;
     insn->previous = NULL;
     insn->flags = 0;
+    va_end(args);
     return insn;
 }
 
-/* free an instruction and its operands */
-
-free_insn(insn)
-    struct insn * insn;
-{
-    int i;
-
-    for (i = 0; i < I_NR_OPERANDS(insn->opcode); i++)
-        free_tree(insn->operand[i]);
-
-    free(insn);
-}
 
 /* put an instruction into the instruction list in a block, 
    at the specified position. if 'before' is NULL, the put it last. */
 
-put_insn(block, insn, before)
-    struct block * block;
-    struct insn *  insn;
-    struct insn *  before;
+void
+put_insn(struct block * block, struct insn * insn, struct insn * before)
 {
     insn->next = before;
 
@@ -300,30 +329,10 @@ put_insn(block, insn, before)
     block->nr_insns++;
 }
 
-/* remove an instruction from its block */
-
-get_insn(block, insn)
-    struct block * block;
-    struct insn *  insn;
-{
-    if (insn->next)
-        insn->next->previous = insn->previous;
-    else
-        block->last_insn = insn->previous;
-
-    if (insn->previous)
-        insn->previous->next = insn->next;
-    else
-        block->first_insn = insn->next;
-
-    block->nr_insns--;
-}
-
 /* remove an instruction from its block and free it */
 
-kill_insn(block, insn)
-    struct block * block;
-    struct insn  * insn;
+void
+kill_insn(struct block * block, struct insn * insn)
 {
     get_insn(block, insn);
     free_insn(insn);    
@@ -331,9 +340,8 @@ kill_insn(block, insn)
 
 /* fill in the regs_defd and regs_used fields of an instruction */
 
-static
-analyze_insn1(regs, reg)
-    int * regs;
+static void
+analyze_insn1(int * regs, int reg)
 {
     int i;
 
@@ -349,8 +357,8 @@ analyze_insn1(regs, reg)
     if (i == NR_INSN_REGS) error(ERROR_INTERNAL); /* overflow */
 }
 
-analyze_insn(insn)
-    struct insn * insn;
+static void
+analyze_insn(struct insn * insn)
 {
     int i;
 
@@ -398,8 +406,8 @@ analyze_insn(insn)
 /* replace references to reg 'x' with 'y' in an instruction.
    this invalidates regs_used[] and regs_defd[]. */
 
-insn_replace_reg(insn, x, y)
-    struct insn * insn;
+void
+insn_replace_reg(struct insn * insn, int x, int y)
 {
     int i;
 
@@ -415,9 +423,8 @@ insn_replace_reg(insn, x, y)
 
 /* does 'reg' appear in 'regs[]'? */
 
-static
-insn_reg1(regs, reg) 
-    int * regs;
+static int
+insn_reg1(int * regs, int reg) 
 {
     int i;
 
@@ -455,9 +462,8 @@ insn_touches_reg(struct insn * insn, int reg)
 
 /* how many members of 'regs[]'? */
 
-static
-insn_reg_count(regs)  
-    int * regs;
+static int
+insn_reg_count(int * regs)  
 {
     int i;
 
@@ -470,16 +476,16 @@ insn_reg_count(regs)
 
 /* how many regs are DEFd in 'insn'? */
 
-insn_nr_defs(insn) 
-    struct insn * insn;
+int
+insn_nr_defs(struct insn * insn)
 {
     return insn_reg_count(insn->regs_defd);
 }
 
 /* how many regs are USEd in 'insn'? */
 
-insn_nr_uses(insn) 
-    struct insn * insn;
+int
+insn_nr_uses(struct insn * insn)
 {
     return insn_reg_count(insn->regs_used);
 }
@@ -488,8 +494,8 @@ insn_nr_uses(insn)
    the insns to the new block, and play with successors to maintain the
    original flow. used by the register allocator. */
 
-split_block(block)
-    struct block * block;
+void
+split_block(struct block * block)
 {
     struct block * latter;
     struct insn  * insn;
@@ -517,9 +523,8 @@ split_block(block)
 /* order and analyze all the instructions, and determine
    some basic register-allocation information for the block. */
 
-static
-analyze_block(block)
-    struct block * block;
+static void
+analyze_block(struct block * block)
 {
     struct insn * insn;
     struct insn * last_cc = NULL;
@@ -562,8 +567,8 @@ analyze_block(block)
    block, then it isn't subject to a temponly restriction. this mainly
    opens up AX, CX, DX and XMM0 in leaf routines to global allocation. */
 
-static
-analyze_blocks()
+static void
+analyze_blocks(void)
 {
     struct block * block;
     int            prohibit_iregs = 0;
@@ -611,29 +616,12 @@ sequence_blocks(void)
     sequence1(first_block);
 }
 
-/* free all the def/use information associated with a block. */
-
-free_defuses(block)
-    struct block * block;
-{
-    struct defuse * defuse;
-    struct defuse * tmp;
-
-    for (defuse = block->defuses; defuse; defuse = tmp) {
-        tmp = defuse->link;
-        free(defuse);
-    }
-
-    block->defuses = NULL;
-}
-
 /* find the def/use information associated with a (pseudo) register in the 
    specified block. if mode is FIND_DEFUSE_CREATE, this is guaranteed to 
    return an entry, otherwise NULL is returned if no def/use data exists. */
 
 struct defuse *
-find_defuse(block, reg, mode)
-    struct block * block;
+find_defuse(struct block * block, int reg, int mode)
 {
     struct defuse * defuse;
     struct symbol * symbol;
@@ -663,9 +651,7 @@ find_defuse(block, reg, mode)
 /* like above, except no ability to create non-existent entries. */
 
 struct defuse *
-find_defuse_by_symbol(block, symbol)
-    struct block  * block;
-    struct symbol * symbol;
+find_defuse_by_symbol(struct block * block, struct symbol * symbol)
 {
     struct defuse * defuse;
 
@@ -677,10 +663,8 @@ find_defuse_by_symbol(block, symbol)
 
 /* (re)compute the local def/use data for the block. */
 
-static
-compute_block_defuses1(block, insn, du)
-    struct block * block;
-    struct insn  * insn;
+static void
+compute_block_defuses1(struct block * block, struct insn * insn, int du)
 {
     struct defuse * defuse;
     int           * regs;
@@ -704,9 +688,8 @@ compute_block_defuses1(block, insn, du)
     }
 }
 
-static
-compute_block_defuses(block)
-    struct block * block;
+static void
+compute_block_defuses(struct block * block)
 {
     struct insn   * insn;
 
@@ -720,7 +703,8 @@ compute_block_defuses(block)
 
 /* compute global def/use data. this destroys any existing def/use data. */
 
-compute_global_defuses()
+void
+compute_global_defuses(void)
 {
     struct block  * block;
     struct block  * successor;

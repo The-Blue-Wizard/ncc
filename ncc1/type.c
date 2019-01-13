@@ -28,7 +28,7 @@
 /* create a new type node and give it sane defaults */
 
 struct type *
-new_type(ts)
+new_type(int ts)
 {
     struct type * type;
 
@@ -81,8 +81,8 @@ free_proto(struct proto * proto)
 /* free a type - the whole type, not just the node.
    safe to call with NULL 'type'. */
 
-free_type(type)
-    struct type * type;
+void
+free_type(struct type * type)
 {
     struct type * tmp;
 
@@ -97,8 +97,7 @@ free_type(type)
 /* return a copy of the type */
 
 struct type *
-copy_type(type)
-    struct type * type;
+copy_type(struct type * type)
 {
     struct type *  copy = NULL;
     struct type ** typep = &copy;
@@ -118,9 +117,7 @@ copy_type(type)
 /* glue two types into one by appending 'type2' on the end of 'type1'. */
 
 struct type *
-splice_types(type1, type2)
-    struct type * type1;
-    struct type * type2;
+splice_types(struct type * type1, struct type * type2)
 {
     struct type * tmp;
 
@@ -144,9 +141,8 @@ splice_types(type1, type2)
    'type1' must be at least as qualified as the type pointed
    to by 'type2'. */
 
-compat_types(type1, type2, flags)
-    struct type * type1;
-    struct type * type2;
+void
+compat_types(struct type * type1, struct type * type2, int flags)
 {
     struct symbol * arg1;
     struct symbol * arg2;
@@ -212,9 +208,8 @@ compat_types(type1, type2, flags)
 /* merge type qualifiers from 'dst' into 'src'.
    caller must ensure that the types are compatible. */
 
-merge_qualifiers(dst, src)
-    struct type * dst;
-    struct type * src;
+void
+merge_qualifiers(struct type * dst, struct type * src)
 {
     while (dst) 
     {
@@ -227,8 +222,8 @@ merge_qualifiers(dst, src)
 /* returns non-zero if the type is modifiable. must recurse
    through struct elements, since they can be 'const'. */
 
-modifiable(type)
-    struct type * type;
+int
+modifiable(struct type * type)
 {
     struct symbol * symbol;
 
@@ -244,8 +239,8 @@ modifiable(type)
 
 /* return true if the type is complete, false otherwise */
 
-complete_type(type)
-    struct type * type;
+int
+complete_type(struct type * type)
 {
     while (type) {
         if ((type->ts & T_ARRAY) && (type->nr_elements == 0))
@@ -263,8 +258,8 @@ complete_type(type)
 /* return the size or alignment of the type in bytes.
    abort with an error if the value isn't, or can't be, known. */
 
-size_of(type)
-    struct type * type;
+int
+size_of(struct type * type)
 {
     long size = 1;
 
@@ -301,8 +296,8 @@ size_of(type)
     return size;
 }
 
-align_of(type)
-    struct type * type;
+int
+align_of(struct type * type)
 {
     int align = 1;
 
@@ -336,12 +331,12 @@ align_of(type)
 }
 
 /* perform some preliminary checks on a type:
-     1. functions must return scalars or void,
+     1. functions can't return arrays or functions,
      2. array elements can't be functions or void,
      3. only the first index of an array can be unbounded. */
 
-validate_type(type)
-    struct type * type;
+void
+validate_type(struct type * type)
 {
     while (type) {
         if (type->ts & T_ARRAY) {
@@ -354,7 +349,7 @@ validate_type(type)
                 error(ERROR_ILLVOID);
             }
         } else if (type->ts & T_FUNC) {
-            if (!(type->next->ts & (T_IS_SCALAR | T_VOID)))
+            if (type->next->ts & (T_ARRAY | T_FUNC))
                 error(ERROR_RETURN);
         }
         type = type->next;
@@ -369,24 +364,23 @@ validate_type(type)
 
      1. arrays become pointers, 
      2. functions become pointers to function,
-     3. floats become doubles (ARGUMENT_TYPE_OLD only)
-     4. structs/unions are prohibited. */
+     3. floats become doubles (ARGUMENT_TYPE_OLD only) */
 
 struct type *
-argument_type(type, mode)
-    struct type * type;
+argument_type(struct type * type, int mode)
 {
     if (type->ts & T_ARRAY) {
         type->ts &= ~T_ARRAY;
-        type->ts = T_PTR;
+        type->ts |= T_PTR;
     }
 
     if (type->ts & T_FUNC) type = splice_types(new_type(T_PTR), type);
-    if (type->ts & T_TAG) error(ERROR_STRUCT);
 
     if (mode == ARGUMENT_TYPE_OLD) {
-        if (type->ts & T_FLOAT) 
-            type->ts = T_DOUBLE;
+        if (type->ts & T_FLOAT) {
+            type->ts &= ~T_FLOAT;
+            type->ts |= T_DOUBLE;
+        }
     }
 
     return type;
@@ -421,8 +415,8 @@ static struct
 
 #define NR_TFLAGS (sizeof(ts)/sizeof(*ts))
 
-debug_type(type)
-    struct type * type;
+void
+debug_type(struct type * type)
 {
     struct symbol * symbol;
     int             i;
