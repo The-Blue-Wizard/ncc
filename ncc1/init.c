@@ -242,6 +242,27 @@ tentatives(void)
     walk_symbols(SCOPE_GLOBAL, SCOPE_GLOBAL, tentative1);
 }
 
+/* process a static initializer for 'symbol'. if 'braced'
+   then the caller has encountered an opening brace (and
+   will expect a matching closing brace)- it just helps 
+   accommodate the rather haphazard brace-elision rules. */
+
+static void 
+static_initializer(struct symbol * symbol, int braced)
+{
+    struct block  * saved_block;
+
+    saved_block = current_block;    /* don't allow code generation */
+    current_block = NULL;
+    segment(SEGMENT_DATA);
+    output(".align %d\n", align_of(symbol->type));
+    output("%G:", symbol);
+    initialize(symbol->type, !braced);
+    symbol->ss |= S_DEFINED;
+    symbol->ss &= ~S_TENTATIVE;
+    current_block = saved_block;
+}
+
 /* just declared the 'symbol' with the explicit storage class 'ss'.
    (we only care about 'ss' to distinguish between explicit and 
    implicit 'extern'). the job of initializer() is to process an 
@@ -251,11 +272,8 @@ void
 initializer(struct symbol * symbol, int ss)
 {
     struct tree   * tree;
-    struct block  * saved_block;
     int             braced = 0;
     struct symbol * temp;
-
-    if (symbol->ss & S_BLOCK) size_of(symbol->type);
 
     if ((symbol->ss & (S_STATIC | S_EXTERN)) && !(ss & S_EXTERN)) {
         if (symbol->ss & S_STATIC) symbol->i = next_asm_label++;
@@ -264,16 +282,7 @@ initializer(struct symbol * symbol, int ss)
         if (token.kk == KK_EQ) {
             if (symbol->ss & S_DEFINED) error(ERROR_DUPDEF);
             lex();
-            saved_block = current_block;    /* don't allow code generation */
-            current_block = NULL;
-
-            segment(SEGMENT_DATA);
-            output(".align %d\n", align_of(symbol->type));
-            output("%G:", symbol);
-            initialize(symbol->type, 1);
-            symbol->ss |= S_DEFINED;
-            symbol->ss &= ~S_TENTATIVE;
-            current_block = saved_block;
+            static_initializer(symbol, 0);
         } else {
             if (symbol->scope != SCOPE_GLOBAL) 
                 bss(symbol);
@@ -283,7 +292,7 @@ initializer(struct symbol * symbol, int ss)
                 symbol->line_number = line_number;
             }
         }
-    } else {
+    } else if (symbol->ss & S_BLOCK) {
         if (token.kk == KK_EQ) {
             lex();
 
@@ -292,24 +301,23 @@ initializer(struct symbol * symbol, int ss)
                 lex();
             }
 
-            if (    (symbol->ss & S_TYPEDEF)
-                ||  (ss & S_EXTERN) 
-                ||  !(symbol->type->ts & (T_IS_SCALAR | T_TAG))) 
-            {
-                error(ERROR_BADINIT);
-            }
-
-            if ((symbol->type->ts & T_TAG) && braced) {
-                temp = new_symbol(NULL, S_STATIC, copy_type(symbol->type));
-                put_symbol(temp, SCOPE_RETIRED);
-
-            } else {
+            if (symbol->type->ts & T_IS_SCALAR) {
                 tree = symbol_tree(symbol);
                 tree = assignment_expression(tree, ASSIGNMENT_CONST);
                 generate(tree, GOAL_EFFECT, NULL);
-            }
+            } else if (symbol->type->ts & (T_TAG | T_ARRAY)) {
+                temp = new_symbol(NULL, S_STATIC, copy_type(symbol->type));
+                put_symbol(temp, SCOPE_RETIRED);
+                temp->i = next_asm_label++;
+                static_initializer(temp, braced);
+                compat_types(symbol->type, temp->type, COMPAT_TYPES_COMPOSE);
+                choose(E_ASSIGN, memory_tree(symbol), memory_tree(temp));
+            } else
+                error(ERROR_INTERNAL);
 
             if (braced) match(KK_RBRACE);
         }
+
+        size_of(symbol->type);  /* ensure locals are complete */
     }
 }

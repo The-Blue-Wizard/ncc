@@ -1,11 +1,35 @@
 This is NCC, the "new" C compiler. It targets the AMD64 architecture.
-
-The compiler is _almost_ ANSI C89 compliant: the only features missing are
-   1. initialization of automatic struct and array variables (soon)
-   2. wide character constants and wide string literals (never)
-
-The binary tools work on a non-standard object file format and produce a.out-
+The compiler is fully ANSI C89 compliant, with the minor exception that
+it doesn't support wide character constants or wide string literals. The 
+binary tools work on a non-standard object file format and produce a.out-
 style executables. These are documented in obj.h and a.out.h respectively.
+
+===========================================================================
+
+1.0-alpha release:
+
+The current release follows several days of mostly front-end modifications
+to bring the compiler to full ANSI compliance. While the core K&R compiler
+had been previously extensively tested, the new changes have not been, so
+this is currently ALPHA quality.
+
+I have tried my best to adhere to the ANSI C89 standard to the letter, with
+the exception of the aforementioned wide characters/strings (which I have
+purposely excluded, because they are mostly useless). I would appreciate
+feedback if any non-standard behavior is observed. 
+
+roadmap:
+
+I will be putting together a simple test suite (which will run with the 
+help of 'nexec'), then return my attention to the optimizer, where the 
+first orders of business will be register coalescing and copy/constant 
+propagation. The output from the code generator is especially amenable to
+these transformations, which will greatly improve the compiler output. 
+After a few minor changes to the accompanying utilities (to add archive 
+support to the linker, mostly), and some heavy testing, a stable 1.0
+release suitable for general use should be ready.
+
+===========================================================================
 
 NCC includes:
 
@@ -21,3 +45,4 @@ These are all original works and are BSD-licensed. See LICENSE and comments.
 
 Charles Youse <charles@gnuless.org>
 January 13, 2019
+

@@ -758,9 +758,11 @@ function_definition(struct symbol * symbol, struct symbol * old_args)
     else
         return_struct_temp = NULL;
 
-    if (old_args || !current_function->type->proto || (current_function->type->proto->ps & P_STALE)) {
-        /* old-style arguments */
+    /* parse types of old-style arguments already in SCOPE_FUNCTION,
+       or import new-style arguments into SCOPE_FUNCTION, and compute
+       their frame addresses */
 
+    if (old_args || !current_function->type->proto || (current_function->type->proto->ps & P_STALE)) {
         declarations(declare_argument, 0, old_args);
 
         for (arg = old_args; arg; arg = arg->list) {
@@ -771,8 +773,6 @@ function_definition(struct symbol * symbol, struct symbol * old_args)
             compute_offset(arg);
         }
     } else {
-        /* new-style arguments */
-
         for (arg = current_function->type->proto->args; arg; arg = arg->list) {
             if (arg->id == NULL) error(ERROR_ARGNAME);
             symbol = new_symbol(arg->id, arg->ss, copy_type(arg->type));

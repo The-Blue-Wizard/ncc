@@ -249,7 +249,8 @@ compound(void)
 
     /* if we're entering function scope and the function returns
        a struct/union, we need to save the return-struct pointer
-       (which is passed by the caller in RAX) first */
+       (which is passed by the caller in RAX) in the temporary
+       allocated for that purpose before doing anything else. */
 
     if ((current_scope == SCOPE_FUNCTION) && return_struct_temp) 
         choose(E_ASSIGN, copy_tree(return_struct_temp), reg_tree(R_AX, new_type(T_LONG)));
