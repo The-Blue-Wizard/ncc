@@ -120,8 +120,8 @@ combine_imm(left, right)
    2. makes sure we actually have a block to emit to, that is,
       we're not trying to evaluate a constant expression */
 
-emit(insn)
-    struct insn * insn;
+static void
+emit(struct insn * insn)
 {
     if (current_block == NULL) error(ERROR_CONEXPR);
     put_insn(current_block, insn, NULL);
@@ -1111,10 +1111,17 @@ generate_assign(tree, goal, cc)     /* E_ASSIGN */
         return insert_field(left, right, goal, cc);
     } else {
         left = generate(left, GOAL_VALUE, NULL);
-        if ((left->op == E_MEM) && (right->op == E_MEM)) right = load(right);
-        tree = copy_tree(right);
-        choose(E_ASSIGN, left, right);
-        return generate_leaf(tree, goal, cc);
+
+        if (left->type->ts & T_TAG) {
+            if ((left->op != E_MEM) || (right->op != E_MEM)) error(ERROR_INTERNAL);
+            emit(new_insn(I_BLKCPY, copy_tree(left), right, int_tree(T_INT, size_of(left->type))));
+            return generate_leaf(left, goal, cc);
+        } else {
+            if ((left->op == E_MEM) && (right->op == E_MEM)) right = load(right);
+            tree = copy_tree(right);
+            choose(E_ASSIGN, left, right);
+            return generate_leaf(tree, goal, cc);
+        }
     }
 }
 

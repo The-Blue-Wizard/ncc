@@ -29,10 +29,8 @@
 
    for now only recognizes same registers. */
 
-static 
-peep_same(t1, t2)
-    struct tree * t1;
-    struct tree * t2;
+static int
+peep_same(struct tree * t1, struct tree * t2)
 {
     if (t1 == NULL) return 0;
     if (t2 == NULL) return 0;
@@ -47,10 +45,8 @@ peep_same(t1, t2)
 /* return non-zero if the sequence starting at 'insn' in 'block'
    matches the template 'pm', zero otherwise. */
 
-peep_match(block, insn, pm)
-    struct block      * block;
-    struct insn       * insn;
-    struct peep_match * pm;
+int
+peep_match(struct block * block, struct insn * insn, struct peep_match * pm)
 {
     int             i;
     int             j;

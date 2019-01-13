@@ -16,7 +16,7 @@ install:: all
 	cp ncc nld nobj nexec ncpp/ncpp ncc1/ncc1 nas/nas ~/bin
 
 clean::
-	rm -f nld ncc nobj
+	rm -f nld ncc nobj nexec
 	make -C ncpp clean
 	make -C ncc1 clean
 	make -C nas clean

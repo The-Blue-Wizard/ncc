@@ -29,12 +29,8 @@
    updates iregs[] and fregs[] (local and block) and the defuse as required. 
    returns R_NONE if allocation fails. */
 
-static
-map_reg(block, defuse, iregs, fregs)
-    struct block  * block;
-    struct defuse * defuse;
-    struct symbol * iregs[];
-    struct symbol * fregs[];
+static int
+map_reg(struct block * block, struct defuse * defuse, struct symbol * iregs[], struct symbol * fregs[])
 {
     struct symbol ** regs;
     struct symbol ** block_regs;
@@ -132,10 +128,8 @@ map_reg(block, defuse, iregs, fregs)
    1. the symbol isn't in this block 
    2. the symbol is a temporary and its life is over */
 
-static 
-cull(block, n, regs)
-    struct block  * block;
-    struct symbol * regs[];
+static void
+cull(struct block * block, int n, struct symbol * regs[])
 {
     struct defuse * defuse;
     int             i;
@@ -150,9 +144,8 @@ cull(block, n, regs)
 
 /* first pass - returns non-zero on success, or zero if a split is required. */
 
-static
-select_regs(block)
-    struct block * block;
+static int
+select_regs(struct block * block)
 {
     struct defuse    * defuse;
     struct insn      * insn;
@@ -218,10 +211,8 @@ select_regs(block)
 #define SPILL_IN    0       /* memory -> reg */
 #define SPILL_OUT   1       /* reg -> memory */
 
-spill(block, defuse, before, dir)
-    struct block  * block;
-    struct defuse * defuse;
-    struct insn   * before;
+static void
+spill(struct block * block, struct defuse * defuse, struct insn * before, int dir)
 {
     struct tree * memory;
     struct tree * reg;
@@ -254,9 +245,8 @@ spill(block, defuse, before, dir)
    in many cases a load or store could be fused with another instruction
    (since AMD64 supports memory operands). TO-DO. */
 
-static 
-rewrite(block)
-    struct block * block;
+static void
+rewrite(struct block * block)
 {
     struct insn   * insn;
     struct defuse * defuse;
@@ -317,13 +307,9 @@ rewrite(block)
    if they're live in to the 'to' block, we need to spill them. 
    exception: never spill out of the entry block - registers hold junk. */
 
-static
-recon1(from, from_regs, to, to_regs, spills)
-    struct block  * from;
-    struct symbol * from_regs[];
-    struct block  * to;
-    struct symbol * to_regs[];
-    struct block  * spills;
+static void
+recon1(struct block * from, struct symbol * from_regs[], 
+       struct block * to, struct symbol * to_regs[], struct block * spills)
 {
     struct defuse * defuse;
     int             i;
@@ -348,13 +334,9 @@ recon1(from, from_regs, to, to_regs, spills)
    don't trust the entry block: it has no values loaded in 
    registers, so always spill them in. */
 
-static
-recon2(from, from_regs, to, to_regs, spills)
-    struct block  * from;
-    struct symbol * from_regs[];
-    struct block  * to;
-    struct symbol * to_regs[];
-    struct block  * spills;
+static void
+recon2(struct block * from, struct symbol * from_regs[], 
+       struct block * to, struct symbol * to_regs[], struct block * spills)
 {
     struct defuse * defuse;
     int             i;
@@ -368,8 +350,8 @@ recon2(from, from_regs, to, to_regs, spills)
     }
 }
 
-reconcile(from, n)
-    struct block * from;
+static void 
+reconcile(struct block * from, int n)
 {
     struct block  * spills;
     struct block  * to;
@@ -394,7 +376,6 @@ reconcile(from, n)
         succeed_block(spills, CC_ALWAYS, to);
     } else
         free_block(spills);
-
 }
 
 void

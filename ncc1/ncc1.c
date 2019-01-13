@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include "ncc1.h"
 
+int             blkcpy_used;        /* if blkcpy is invoked */
 int             g_flag;             /* -g: produce debug info */
 int             O_flag;             /* -O: enable optimizations */
 FILE          * yyin;               /* lexical input */
@@ -128,7 +129,8 @@ static char *errors[] =
     "incorrect number of arguments"         /* ERROR_ARGCOUNT */
 };
 
-error(code)
+void
+error(int code)
 {
     fprintf(stderr, "cc1: ");
 
@@ -199,6 +201,7 @@ main(argc, argv)
     literals();
     tentatives();
     externs();
+    if (blkcpy_used) output(".global blkcpy\n");
 
     fclose(output_file);
     exit(0);

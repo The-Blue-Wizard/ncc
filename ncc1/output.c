@@ -165,13 +165,8 @@ output_operand(tree)
 
    any unrecognized specifiers will bomb */
 
-#ifdef __STDC__
 void
 output(char * fmt, ...)
-#else
-output(fmt)
-    char * fmt;
-#endif
 {
     va_list         args;
     struct symbol * symbol;
@@ -296,6 +291,24 @@ static char *insns[] =
         /*  55 */   "test", "ret", "inc", "dec"
 };
 
+#define NR_INSNS (sizeof(insns)/sizeof(*insns))
+
+/* handle the synthetic instructon I_BLKCPY. for now, always invokes the
+   'blkcpy' library function. should be modified to inline small copies. */
+
+static void
+blkcpy(struct insn * insn)
+{
+    blkcpy_used = 1;
+
+    output(" ; BLKCPY %O, %O, %O\n", insn->operand[0], insn->operand[1], insn->operand[2]);
+    output(" lea rax, %O\n", insn->operand[0]);
+    output(" lea rdx, %O\n", insn->operand[1]);
+    output(" mov ecx, %O\n", insn->operand[2]);
+    output(" call blkcpy\n");
+    output(" ; END BLKCPY");
+}
+
 /* output a block. the main task of this function is to output the 
    instructions -- a simple task. the debugging data is most of the work! */
 
@@ -363,11 +376,19 @@ output_block(block)
     output("\n%L:\n", block->asm_label);
 
     for (insn = block->first_insn; insn; insn = insn->next) {
-        output(" %s ", insns[I_IDX(insn->opcode)]);
-        for (i = 0; i < I_NR_OPERANDS(insn->opcode); i++) {
-            if (i) output(",");
-            output("%O", insn->operand[i]);
+
+        if (insn->opcode == I_BLKCPY) {
+            blkcpy(insn);
+        } else {
+            if (I_IDX(insn->opcode) >= NR_INSNS) error(ERROR_INTERNAL);
+            output(" %s ", insns[I_IDX(insn->opcode)]);
+
+            for (i = 0; i < I_NR_OPERANDS(insn->opcode); i++) {
+                if (i) output(",");
+                output("%O", insn->operand[i]);
+            }
         }
+        
         if ((insn->flags & INSN_FLAG_CC) && g_flag) output(" ; FLAG_CC");
         output("\n");
     }

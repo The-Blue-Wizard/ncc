@@ -92,8 +92,8 @@ new_tree(op, type, ch0, ch1, ch2)
 
 /* free a tree and any forest headed by this tree. */
 
-free_tree(tree)
-    struct tree * tree;
+void
+free_tree(struct tree * tree)
 {
     int i;
 
@@ -514,9 +514,17 @@ check_operand_types(op, left, right)
         } else
             break;
 
+    case E_ASSIGN:
+        if (    (!(left->ts & T_IS_ARITH) || !(right->ts & T_IS_ARITH))
+            &&  (!(left->ts & right->ts & T_PTR)) 
+            &&  (!((left->ts & right->ts & T_TAG) && (left->tag == right->tag))))
+         {
+            error(ERROR_INCOMPAT);
+         } else
+            break;
+
     case E_EQ:
     case E_NEQ:
-    case E_ASSIGN:
     case E_GT:
     case E_GTEQ:
     case E_LT:
@@ -840,7 +848,6 @@ call_expression(struct tree * tree)
     return tree;
 }
 
-
 static struct tree *
 postfix_expression(void)
 {
@@ -1083,7 +1090,7 @@ assignment_expression(struct tree * left, int mode)
        with a left-side pointer type here is straight 
        assignment, which doesn't involve an implicit cast */
 
-    if (!(left->type->ts & T_PTR)) {
+    if (!(left->type->ts & T_PTR) && !(left->type->ts & T_TAG)) {
         right = new_tree(E_CAST, copy_type(left->type), right);
         right->type->ts &= T_BASE; /* no bitfield here */
     }

@@ -431,24 +431,24 @@ insn_reg1(regs, reg)
 
 /* is 'reg' DEFd in 'insn'? */
 
-insn_defs_reg(insn, reg)
-    struct insn * insn;
+int
+insn_defs_reg(struct insn * insn, int reg)
 {
     return insn_reg1(insn->regs_defd, reg);
 }
 
 /* is 'reg' USEd in 'insn'? */
 
-insn_uses_reg(insn, reg) 
-    struct insn * insn;
+int
+insn_uses_reg(struct insn * insn, int reg)
 {
     return insn_reg1(insn->regs_used, reg);
 }
 
 /* does 'reg' appear in 'insn'? */
 
-insn_touches_reg(insn, reg) 
-    struct insn * insn;
+int
+insn_touches_reg(struct insn * insn, int reg)
 {
     return (insn_uses_reg(insn, reg) || insn_defs_reg(insn, reg));
 }
@@ -777,9 +777,8 @@ compute_global_defuses()
    2. its last appearance in 'block' is at or before 'insn',
    3. it's not live out of the block. */
 
-reg_is_dead(block, insn, reg)
-    struct block * block;
-    struct insn  * insn;
+int
+reg_is_dead(struct block * block, struct insn * insn, int reg)
 {
     struct defuse * defuse;
 

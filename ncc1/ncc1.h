@@ -73,6 +73,7 @@
 #include "block.h"
 #include "peep.h"
 
+extern int              blkcpy_used;
 extern int              g_flag;
 extern int              O_flag;
 extern FILE *           yyin;
@@ -96,8 +97,11 @@ extern struct block *   exit_block;
 extern struct block *   first_block;
 extern struct block *   last_block;
 
+extern void            error(int);
+extern void            compound(void);
 extern void            yyinit(void);
 extern int             lex(void);
+extern int             peek(struct string **);
 extern void            expect(int);
 extern void            match(int);
 extern void            prohibit(int);
@@ -121,6 +125,12 @@ extern void            allocate_regs(void);
 extern struct tree   * assignment_expression(struct tree *, int);
 extern struct tree   * fake_assignment(struct type *);
 extern struct tree   * expression(void);
+extern int             reg_is_dead(struct block *, struct insn *, int);
+extern int             insn_uses_reg(struct insn *, int);
+extern int             insn_defs_reg(struct insn *, int);
+extern int             insn_touches_reg(struct insn *, int);
+extern int             peep_match(struct block *, struct insn *, struct peep_match *);
+extern void            free_tree(struct tree *);
 
 extern char *           allocate();
 extern struct string *  stringize();

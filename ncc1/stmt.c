@@ -44,10 +44,10 @@ static struct block       * break_block;
 static struct block       * continue_block;
 static struct block       * default_block;
 
-static statement();
+static void statement(void);
 
-static
-if_statement()
+static void
+if_statement(void)
 {
     struct block * true_block;
     struct block * else_block;
@@ -84,8 +84,8 @@ if_statement()
     current_block = join_block;
 }
 
-static
-while_statement()
+static void
+while_statement(void)
 {
     struct block * test_block;
     struct block * body_block;
@@ -123,8 +123,8 @@ while_statement()
     break_block = saved_break_block;
 }
 
-static
-do_statement()
+static void
+do_statement(void)
 {
     struct block * saved_continue_block;
     struct block * saved_break_block;
@@ -159,8 +159,8 @@ do_statement()
     break_block = saved_break_block;
 }
 
-static
-return_statement()
+static void
+return_statement(void)
 {
     struct type * return_type;
     struct tree * tree;
@@ -185,8 +185,8 @@ return_statement()
     match(KK_SEMI);
 }
 
-static 
-for_statement()
+static void
+for_statement(void)
 {
     struct block * saved_continue_block;
     struct block * saved_break_block;
@@ -237,7 +237,8 @@ for_statement()
     break_block = saved_break_block;
 }
 
-compound()
+void
+compound(void)
 {
     enter_scope();
     match(KK_LBRACE);
@@ -247,9 +248,8 @@ compound()
     exit_scope(EXIT_SCOPE_BLOCK);
 }
 
-static
-loop_control(block)
-    struct block * block;
+static void
+loop_control(struct block * block)
 {
     lex();
     if (block == NULL) error(ERROR_MISPLACED);
@@ -258,8 +258,8 @@ loop_control(block)
     match(KK_SEMI);
 }
 
-static
-label_statement()
+static void
+label_statement(void)
 {
     struct symbol * label;
 
@@ -276,8 +276,8 @@ label_statement()
     statement();
 }
 
-static
-goto_statement()
+static void
+goto_statement(void)
 {
     struct symbol * label;
 
@@ -291,8 +291,8 @@ goto_statement()
     current_block = new_block();
 }
 
-static
-switch_statement()
+static void
+switch_statement(void)
 {
     struct switchcase * saved_switchcases;
     struct block      * saved_default_block;
@@ -353,8 +353,8 @@ switch_statement()
     switch_type = saved_switch_type;
 }
 
-static
-case_statement()
+static void
+case_statement(void)
 {
     struct switchcase   * switchcase;
     struct tree         * value;
@@ -393,8 +393,8 @@ case_statement()
     statement();
 }
 
-static
-statement()
+static void
+statement(void)
 {
     struct tree * tree;
 
