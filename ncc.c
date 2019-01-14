@@ -31,16 +31,12 @@
 #include <stdarg.h>
 #include <sys/types.h>
 
-/* this list will shrink once we implement archive support in the linker .. */
-
 char * libs[] =
 {
     "/lib/libc.a"
 };
 
 #define NR_LIBS (sizeof(libs)/sizeof(*libs))
-
-char * mem();
 
 /* lists holds the arguments used to invoke external programs */
 
@@ -69,15 +65,21 @@ struct list temps;          /* list of temporary files (delete before exit) */
 int    goal = EXEC_FILE;
 char * ld_out;
 
+/* remove all temporary files */
+
+static void
+rmtemps(void)
+{
+    int i;
+
+    for (i = 0; i < temps.len; i++) 
+        unlink(temps.s[i]);
+}
+
 /* print an error message and abort */
 
-#ifdef __STDC__
-void
+static void
 error(char * fmt, ...)
-#else
-error(fmt)
-    char * fmt;
-#endif
 {
     va_list args;
 
@@ -95,11 +97,10 @@ error(fmt)
 
 /* safe malloc */
 
-char *
-mem(sz)
+static void *
+mem(int sz)
 {
-    char * p = malloc(sz);
-
+    void * p = malloc(sz);
     if (!p) error("out of memory");
     return p;
 }
@@ -107,13 +108,8 @@ mem(sz)
 
 #define LIST_INC 10     /* increment of list element allocations */
 
-#ifdef __STDC__
-void
+static void
 add(struct list * list, ...)
-#else
-add(list)
-    struct list * list;
-#endif
 {
     va_list ss;
     char **new;
@@ -138,9 +134,8 @@ add(list)
 
 /* copy all the elements from 'dst' to 'src' */
 
-copy(dst, src)
-    struct list * dst;
-    struct list * src;
+static void
+copy(struct list * dst, struct list * src)
 {
     int i;
 
@@ -149,21 +144,10 @@ copy(dst, src)
     for (i = 0; i < src->len; i++) add(dst, src->s[i], NULL);
 }
 
-/* remove all temporary files */
-
-rmtemps()
-{
-    int i;
-
-    for (i = 0; i < temps.len; i++) 
-        unlink(temps.s[i]);
-}
-
-
 /* return the type of a file based on its extension */
 
-type(name)
-    char * name;
+static int
+type(char * name)
 {
     char *dot;
 
@@ -186,9 +170,8 @@ type(name)
 /* return a copy of the name in question with its
    extension changed to 'ext' */
 
-char *
-morph(name, ext)
-    char * name;
+static char *
+morph(char * name, int ext)
 {
     char * dot;
     char * new;
@@ -206,9 +189,8 @@ morph(name, ext)
    output to 'out'. 'out' will be removed if the program
    returns an error. */
 
-run(args, out)
-    struct list * args;
-    char        * out;
+static void
+run(struct list * args, char * out)
 {
     pid_t pid;
     int status;
@@ -229,8 +211,8 @@ run(args, out)
     }
 }
 
-main(argc, argv)
-    char * argv[];
+int
+main(int argc, char * argv[])
 {
     char * new;
     char * src;
