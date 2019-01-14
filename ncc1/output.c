@@ -28,8 +28,8 @@
 /* write a register name to the output file.  the T_* type bits
    are used solely as a hint to the proper size for integer registers. */
 
-static
-output_reg(reg, ts)
+static void
+output_reg(int reg, int ts)
 {
     static char *iregs[NR_REGS][4] = {
         { "al", "ax", "eax", "rax" },
@@ -75,9 +75,8 @@ output_reg(reg, ts)
 
 /* outputting operands is an easy, if messy, business. */
 
-static
-output_operand(tree)
-    struct tree * tree;
+static void
+output_operand(struct tree * tree)
 {
     double     d;
     float      f;

@@ -131,7 +131,7 @@ declare_member(int ss, struct string * id, struct type * type, void * data, int 
 }
 
 static struct type *
-struct_or_union()
+struct_or_union(void)
 {
     struct symbol * tag;
     int             ss;
@@ -180,7 +180,7 @@ struct_or_union()
 /* parse an enum specifier. */
 
 static struct type *
-enum_specifier()
+enum_specifier(void)
 {
     struct string * id;
     struct symbol * symbol;
@@ -292,8 +292,7 @@ map_type(int kk_ts)
    are encountered, return NULL. */
 
 static struct type *
-type_specifier(ss)
-    int * ss;
+type_specifier(int * ss)
 {
     struct symbol * symbol;
     struct type   * type = NULL;
@@ -487,8 +486,7 @@ proto_arguments(void)
    args to list headed by 'old_args', if present */
 
 static struct type *
-old_arguments(old_args)
-    struct symbol ** old_args;
+old_arguments(struct symbol ** old_args)
 {
     struct symbol * symbol;
 

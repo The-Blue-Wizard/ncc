@@ -142,8 +142,7 @@ decap_tree(struct tree * tree, struct type ** type, struct tree ** ch0, struct t
 /* copy this tree/forest */
 
 struct tree *
-copy_tree(tree)
-    struct tree * tree;
+copy_tree(struct tree * tree)
 {
     struct tree * tree2 = NULL;
     int           i;
@@ -168,8 +167,7 @@ copy_tree(tree)
    we catch all referenced S_EXTERNs. */
 
 struct tree *
-symbol_tree(symbol)
-    struct symbol * symbol;
+symbol_tree(struct symbol * symbol)
 {
     struct tree * tree;
 
@@ -402,9 +400,7 @@ scale_pointers(struct tree * tree)
    then convert the tree to a null pointer of 'type'. */
 
 static struct tree *
-null_pointer(tree, type)
-    struct tree * tree;
-    struct type * type;
+null_pointer(struct tree * tree, struct type * type)
 {
     if ((type->ts & T_PTR) && (tree->op == E_CON) && (tree->u.con.i == 0)) 
         tree = new_tree(E_CAST, copy_type(type), tree);
@@ -429,9 +425,7 @@ null_pointer(tree, type)
 #define VOID_POINTER_OTHER  1
 
 static struct tree *
-void_pointer(tree, type, mode)
-    struct tree * tree;
-    struct type * type;
+void_pointer(struct tree * tree, struct type * type, int mode)
 {
     struct type * tree_target;
     struct type * type_target;
@@ -552,10 +546,7 @@ check_operand_types(int op, struct type * left, struct type * right)
    'condition' is ignored except for KK_QUEST (the ternary operator). */
 
 static struct tree *
-token_tree(kk, left, right, condition)
-    struct tree * left;
-    struct tree * right;
-    struct tree * condition;
+token_tree(int kk, struct tree * left, struct tree * right, struct tree * condition)
 {
     int           op;
     int           null_zeroes;
@@ -855,7 +846,7 @@ postfix_expression(void)
         case KK_LBRACK:
             lex();
             index = expression();
-            tree = token_tree(KK_PLUS, tree, index);
+            tree = token_tree(KK_PLUS, tree, index, NULL);
             if (!(tree->type->ts & T_PTR)) error(ERROR_INDIR);
             tree = new_tree(E_FETCH, copy_type(tree->type->next), tree);
             match(KK_RBRACK);
@@ -981,7 +972,7 @@ binary_expression(int prec)
         kk = token.kk;
         lex();
         right = binary_expression(prec - 1);
-        left = token_tree(kk, left, right);
+        left = token_tree(kk, left, right, NULL);
     }
 
     return left;
