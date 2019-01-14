@@ -82,15 +82,33 @@ char                     buffer[BUFFER_SIZE];
 int                      type = -1;
 int                      raw_flag;
 
+void                     error(char * fmt, ...);
+void                   * allocate(int);
+unsigned                 compute_hash(char *);
+struct global          * find_global(char *);
+void                     text_phase(struct object *);
+void                     data_phase(struct object *);
+void                     bss_phase(struct object *);
+void                     reloc_phase(struct object *);
+void                     walk_objects(void (*)(struct object *));
+void                     open_object(struct object *);
+void                     close_object(struct object *);
+struct object          * new_object(char *);
+int                      import(char *);
+void                     pad(int, int);
+void                     debug_info(void);
+struct global          * export(char *, struct obj_symbol *);
+void                     output(int, void *, int);
+void                     input(int, void *, int);
+void                     copy_segment(struct object *, int, int, int);
+void                     read_object(struct object *, int, void *, int);
+void                     offset_symbols(struct object *, int, long);
+void                     offset_relocs(struct object *, int, int);
+
 /* output an error message, clean up, and abort */
 
-#ifdef __STDC__
 void
 error(char * fmt, ...)
-#else
-error(fmt)
-    char *fmt;
-#endif
 {
     va_list args;
 
@@ -111,12 +129,10 @@ error(fmt)
 
 /* allocate or bust */
 
-char *
-allocate(bytes)
-    int bytes;
+void *
+allocate(int bytes)
 {
-    char * p = malloc(bytes);
-
+    void * p = malloc(bytes);
     if (p == NULL) error("out of memory");
     return p;
 }
@@ -124,8 +140,7 @@ allocate(bytes)
 /* return the hash of a NUL-terminated string */
 
 unsigned
-compute_hash(name)
-    char *name;
+compute_hash(char * name)
 {
     unsigned hash;
     int      i;
@@ -141,8 +156,7 @@ compute_hash(name)
 /* look up a global symbol. returns NULL if not found. */
 
 struct global *
-find_global(name)
-    char * name;
+find_global(char * name)
 {
     struct global * global;
     unsigned        hash;
@@ -167,9 +181,7 @@ find_global(name)
 /* export a global symbol from an object. */
 
 struct global *
-export(name, symbol)
-    char              * name;
-    struct obj_symbol * symbol;
+export(char * name, struct obj_symbol * symbol)
 {
     struct global * global;
     unsigned        hash;
@@ -191,7 +203,8 @@ export(name, symbol)
 
 /* write global symbols out (debugging data) */
 
-debug_info()
+void
+debug_info(void)
 {
     struct global * global;
     int             i;
@@ -214,23 +227,23 @@ debug_info()
 
 /* error-free I/O with output file */
 
-output(position, buffer, length)
-    char * buffer;
+void
+output(int position, void * buffer, int length)
 {
-    if (fseek(out_fp, (long) position, SEEK_SET))
+    if (fseek(out_fp, position, SEEK_SET))
         error("can't seek output file '%s'", out_fp);
 
-    if (fwrite(buffer, sizeof(char), sizeof(char) * length, out_fp) != (sizeof(char) * length))
+    if (fwrite(buffer, 1, length, out_fp) != length)
         error("error writing output '%s'", out_path);
 }
 
-input(position, buffer, length)
-    char * buffer;
+void
+input(int position, void * buffer, int length)
 {
-    if (fseek(out_fp, (long) position, SEEK_SET))
+    if (fseek(out_fp, position, SEEK_SET))
         error("can't seek output file '%s'", out_fp);
 
-    if (fread(buffer, sizeof(char), sizeof(char) * length, out_fp) != (sizeof(char) * length))
+    if (fread(buffer, 1, length, out_fp) != length)
         error("error reading output '%s'", out_path, length);
 }
 
@@ -238,8 +251,8 @@ input(position, buffer, length)
 
 #define MIN(a,b)        (((a) < (b)) ? (a) : (b))
 
-copy_segment(object, from, to, length)
-    struct object * object;
+void
+copy_segment(struct object * object, int from, int to, int length)
 {
     int size;
 
@@ -255,14 +268,13 @@ copy_segment(object, from, to, length)
 
 /* error-free input from the object file */
 
-read_object(object, position, buffer, length)
-    struct object * object;
-    char          * buffer;
+void
+read_object(struct object * object, int position, void * buffer, int length)
 {
-    if (fseek(object->fp, (long) position, SEEK_SET))
+    if (fseek(object->fp, position, SEEK_SET))
         error("can't seek input file '%s'", object->path);
 
-    if (fread(buffer, sizeof(char), sizeof(char) * length, object->fp) != (sizeof(char) * length))
+    if (fread(buffer, 1, length, object->fp) != length)
         error("error reading object '%s'", object->path);
 }
 
@@ -270,15 +282,15 @@ read_object(object, position, buffer, length)
    all the files open, but for now we open and close them
    to keep the number of file handles to a minimum. */
 
-open_object(object)
-    struct object * object;
+void
+open_object(struct object * object)
 {
     object->fp = fopen(object->path, "r");
     if (object->fp == NULL) error("'%s': can't open", object->path);
 }
 
-close_object(object)
-    struct object * object;
+void
+close_object(struct object * object)
 {
     fclose(object->fp);
     object->fp = NULL;
@@ -287,8 +299,7 @@ close_object(object)
 /* create a new object, and read in its metadata */
 
 struct object *
-new_object(path)
-    char * path;
+new_object(char * path)
 {
     struct object * object;
     FILE          * fp;
@@ -336,8 +347,10 @@ new_object(path)
 /* find the object that exports 'name' and reference it.
    returns non-zero on success, or zero if not found. */
 
-import(name)
-    char          * name;
+void reference(struct object *);
+
+int
+import(char * name)
 {
     struct object     * object;
     struct obj_symbol * symbol;
@@ -363,8 +376,8 @@ import(name)
    it referenced, and export all its global symbols to our table.
    then, attempt to import the object's undefined globals. */
 
-reference(object)
-    struct object * object;
+void
+reference(struct object * object)
 {
     struct obj_symbol * symbol;
     char              * name;
@@ -391,9 +404,8 @@ reference(object)
    'segment' is one of OBJ_SYMBOL_SEG_TEXT or OBJ_SYMBOL_SEG_DATA.
    'flags' is one of OBJ_RELOC_TEXT or OBJ_RELOC_DATA. */
 
-offset_symbols(object, segment, offset)
-    struct object * object;
-    long            offset;
+void
+offset_symbols(struct object * object, int segment, long offset)
 {
     struct obj_symbol * symbol;
     int                 i;
@@ -405,8 +417,8 @@ offset_symbols(object, segment, offset)
     }
 }
 
-offset_relocs(object, flags, offset)
-    struct object * object;
+void
+offset_relocs(struct object * object, int flags, int offset)
 {
     struct obj_reloc * reloc;
     int                i;
@@ -419,7 +431,8 @@ offset_relocs(object, flags, offset)
 
 /* output 'b' until 'current_address' is aligned at 'align' boundary */
 
-pad(b, align)
+void
+pad(int b, int align)
 {
     while (current_address % align) {
         output(current_address - base_address, &b, 1);
@@ -427,8 +440,8 @@ pad(b, align)
     }
 }
 
-text_phase(object)
-    struct object * object;
+void
+text_phase(struct object * object)
 {
     open_object(object);
     copy_segment(object, OBJ_TEXT_OFFSET(object->header), current_address - base_address, object->header.text_bytes);
@@ -439,9 +452,8 @@ text_phase(object)
     pad(0x90, 8); /* NOP */
 }
 
-
-data_phase(object)
-    struct object * object;
+void
+data_phase(struct object * object)
 {
     open_object(object);
     copy_segment(object, OBJ_DATA_OFFSET(object->header), current_address - base_address, object->header.data_bytes);
@@ -452,9 +464,8 @@ data_phase(object)
     pad(0, 8);
 }
 
-
-bss_phase(object)
-    struct object * object;
+void
+bss_phase(struct object * object)
 {
     struct obj_symbol * symbol;
     int                 i;
@@ -470,9 +481,8 @@ bss_phase(object)
     }
 }
 
-
-reloc_phase(object)
-    struct object * object;
+void
+reloc_phase(struct object * object)
 {
     struct obj_reloc  * reloc;
     struct obj_symbol * symbol;
@@ -510,8 +520,8 @@ reloc_phase(object)
 
 /* call 'f' on all referenced objects */
 
-walk_objects(f)
-    int ( * f ) ();
+void
+walk_objects(void (*f)(struct object *))
 {
     struct object * object;
 
@@ -519,8 +529,8 @@ walk_objects(f)
         if ((object->flags & OBJECT_REFERENCED)) f(object);
 }
 
-main(argc, argv)
-    char *argv[];
+int
+main(int argc, char * argv[])
 {
     struct global * global;
     int             opt;
