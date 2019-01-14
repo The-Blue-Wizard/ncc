@@ -36,8 +36,8 @@ char              * path;
 int                 s_flag = 0;
 int                 r_flag = 0;
 
-error(msg)
-    char * msg;
+static void
+error(char * msg)
 {
     fprintf(stderr, "obj: ");
     if (path) fprintf(stderr, "'%s': ", path);
@@ -48,20 +48,21 @@ error(msg)
 /* read 'nr_bytes' bytes into 'buffer' from 'position' in 'fp',
    and make sure no errors occur in the process. */
 
-input(position, buffer, nr_bytes)
-    char * buffer;
+static void
+input(int position, void * buffer, int nr_bytes)
 {
-    if (fseek(fp, (long) position, SEEK_SET))
+    if (fseek(fp, position, SEEK_SET))
         error("seek error");
 
-    if (fread(buffer, sizeof(char), sizeof(char) * nr_bytes, fp) != (sizeof(char) * nr_bytes))
+    if (fread(buffer, 1, nr_bytes, fp) != nr_bytes)
         error("read error");
 }
 
 /* print out a NUL-terminated string starting at 'position'.
    returns the size of the string printed (excluding terminator). */
 
-string(position)
+static int
+string(int position)
 {
     int  i;
     char c;
@@ -78,7 +79,8 @@ string(position)
 
 /* print out the name of a symbol, given the symbol's index. */
 
-obj_name(index)
+static void
+obj_name(int index)
 {
     struct obj_symbol symbol;
 
@@ -88,7 +90,8 @@ obj_name(index)
 
 /* print out a table of all the symbols in the object */
 
-obj_symbols()
+static void
+obj_symbols(void)
 {
     struct obj_symbol symbol;
     int               i;
@@ -129,7 +132,8 @@ obj_symbols()
 
 /* print out all the relocation records in the file */
 
-obj_relocs()
+static void
+obj_relocs(void)
 {
     struct obj_reloc reloc;
     int              i;
@@ -157,7 +161,8 @@ obj_relocs()
     putchar('\n');
 }
 
-exec_symbols()
+static void
+exec_symbols(void)
 {
     int  symofs;
     int  length;
@@ -186,12 +191,13 @@ exec_symbols()
     putchar('\n');
 }
 
-exec_relocs()
+static void
+exec_relocs(void)
 {
 }
 
-main(argc, argv)
-    char * argv[];
+int
+main(int argc, char *argv[])
 {
     int opt;
     int magic;
