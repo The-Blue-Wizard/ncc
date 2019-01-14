@@ -29,12 +29,10 @@
 
 /* guaranteed-not-to-fail allocation, sort of */
 
-static char *
-allocate(bytes)
-    int bytes;
+static void *
+allocate(int bytes)
 {
-    char * p = malloc(bytes);
-
+    void * p = malloc(bytes);
     if (p == NULL) error("out of memory");
     return p;
 }
@@ -45,9 +43,7 @@ static struct name * buckets[NR_NAME_BUCKETS];
    this is basically a copy of stringize() from symbol.c in the C compiler. */
 
 struct name *
-lookup_name(data, length)
-    char * data;
-    int    length;
+lookup_name(char * data, int length)
 {
     struct name ** namep;
     struct name  * name;
@@ -96,14 +92,14 @@ lookup_name(data, length)
    symbol index that will be assigned to the symbol, NOT the
    index into the name table as it means on disk! */
 
-reference(name)
-    struct name * name;
+void
+reference(struct name * name)
 {
     int position;
 
     if (pass == FIRST_PASS) {
         if (name->symbol == NULL) {
-            name->symbol = (struct obj_symbol *) allocate(sizeof(struct obj_symbol));
+            name->symbol = allocate(sizeof(struct obj_symbol));
             name->symbol->index = nr_symbols;
             name->symbol->flags = 0;
             name->symbol->value = 0;
@@ -139,9 +135,8 @@ reference(name)
 /* assign the given symbol the specified value, and mark it defined. 
    like reference(), there's a fair amount of bookkeeping done here. */
 
-define(name, value)
-    struct name * name;
-    long          value;
+void
+define(struct name * name, long value)
 {
     reference(name);
 
@@ -205,7 +200,7 @@ static struct
 
 struct {
     char   * text;
-    int  ( * handler )();
+    void  ( * handler )(void);
 } pseudos[] = {
     { "byte", pseudo_byte },
     { "word", pseudo_word },
@@ -225,7 +220,8 @@ struct {
 
 #define NR_PSEUDOS (sizeof(pseudos)/sizeof(*pseudos))
 
-load_names()
+void
+load_names(void)
 {
     struct name * name;
     int           i;

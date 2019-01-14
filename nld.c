@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <sys/stat.h>
 
 #include "obj.h"
 #include "a.out.h"

@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <unistd.h>
 #include "ncpp.h"
 
 struct input * input_stack;
@@ -34,8 +35,8 @@ struct input * input_stack;
    input_line() will return text from this file. ownership of 'path' is
    yielded by the caller. */
 
-input_open(path)
-    struct vstring * path;
+void
+input_open(struct vstring * path)
 {
     struct input * input;
 
@@ -54,9 +55,8 @@ input_open(path)
 
 static int in_comment;
 
-static
-erase_comments(vstring)
-    struct vstring * vstring;
+static void
+erase_comments(struct vstring * vstring)
 {
     int i = 0;
     int delimiter = 0;
@@ -93,7 +93,7 @@ erase_comments(vstring)
    if 'mode' is INPUT_LINE_LIMITED, then refuse to cross a file boundary. */
 
 struct vstring *
-input_line(mode)
+input_line(int mode)
 {
     struct vstring * vstring;
     int              c;
@@ -159,8 +159,8 @@ struct include_directory * include_directories;
 
 /* add a directory to search for system includes. */
 
-input_include_directory(path)
-    char * path;
+void
+input_include_directory(char * path)
 {
     struct include_directory * directory;
 
@@ -184,8 +184,8 @@ input_include_directory(path)
    
    ownership of 'path' is yielded by the caller. */
 
-input_include(path, mode)
-    struct vstring * path;
+void
+input_include(struct vstring * path, int mode)
 {   
     struct include_directory * directory;
     struct vstring           * new_path;

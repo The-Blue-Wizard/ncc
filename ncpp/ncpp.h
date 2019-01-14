@@ -24,13 +24,6 @@
 
 extern FILE * output_file;
 
-extern char * safe_malloc();
-
-#ifdef __STDC__
-extern void   fail(char *, ...);
-extern void   output(char *, ...);
-#endif
-
 /* struct vstring represents a variable-length string */
 
 struct vstring
@@ -39,13 +32,6 @@ struct vstring
     int    length;
     int    capacity;
 };
-
-extern struct vstring * vstring_new();
-extern struct vstring * vstring_copy();
-extern struct vstring * vstring_from_literal();
-extern int              vstring_equal();
-extern int              vstring_equal_s();
-extern unsigned         vstring_hash();
 
 struct macro
 {
@@ -58,8 +44,6 @@ struct macro
 
 #define MACRO_LOOKUP_NORMAL 0
 #define MACRO_LOOKUP_CREATE 1
-
-extern struct macro * macro_lookup();
 
 #define MACRO_REPLACE_ONCE   0
 #define MACRO_REPLACE_REPEAT 1
@@ -76,8 +60,6 @@ extern struct input * input_stack;
 
 #define INPUT_LINE_NORMAL  0
 #define INPUT_LINE_LIMITED 1
-
-extern struct vstring * input_line();
 
 #define INPUT_INCLUDE_LOCAL  0   
 #define INPUT_INCLUDE_SYSTEM 1
@@ -174,16 +156,6 @@ struct list
 #define TOKEN_ELLIPSIS      57      /* ... */
 #define TOKEN_PASTE         58      /* ## (in macro replacement list) */
 
-extern struct token * token_new();
-extern struct token * token_copy();
-extern struct token * token_paste();
-extern int            token_equal();
-extern struct list  * list_new();
-extern struct token * list_unlink();
-extern struct token * list_delete();
-struct list         * list_copy();
-extern int            list_equal();
-
 #define LIST_TRIM_LEADING       0x00000001
 #define LIST_TRIM_TRAILING      0x00000002
 #define LIST_TRIM_EDGES         (LIST_TRIM_LEADING | LIST_TRIM_TRAILING)
@@ -193,7 +165,51 @@ extern int            list_equal();
 #define LIST_GLUE_RAW       0
 #define LIST_GLUE_STRINGIZE 1
 
-extern struct vstring * list_glue();
-
 #define SKIP_SPACES(t) while ((t) && ((t)->class == TOKEN_SPACE)) ((t) = (t)->next)
+
+extern void             input_open(struct vstring *);
+extern void             input_include_directory(char *);
+extern void             input_include(struct vstring *, int);
+extern struct token   * token_new(int);
+extern void             token_free(struct token *);
+extern struct token   * token_copy(struct token *);
+extern void             token_print(struct token *, FILE *);
+extern struct token   * token_paste(struct token *, struct token *);
+extern int              token_equal(struct token *, struct token *);
+extern void             token_convert_number(struct token *);
+extern struct list    * list_new(void);
+extern void             list_free(struct list *);
+extern void             list_clear(struct list *);
+extern struct token   * list_unlink(struct list *, struct token *);
+extern struct token   * list_delete(struct list *, struct token *);
+extern struct list    * list_copy(struct list *);
+extern int              list_equal(struct list *, struct list *);
+extern void             list_insert(struct list *, struct token *, struct token *);
+extern struct vstring * list_glue(struct list *, int);
+extern void             list_move(struct list *, struct list *, int, struct token *);
+extern void             list_trim(struct list *, int);
+extern void             list_cut(struct list *, struct token *);
+extern struct vstring * input_line(int);
+extern struct macro   * macro_lookup(struct vstring *, int);
+extern void             macro_define(struct vstring *, struct list *, struct list *);
+extern void             macro_undef(struct vstring *);
+extern void             macro_option(char *);
+extern void             macro_predefine(void);
+extern void             macro_replace(struct list *, int);
+extern struct vstring * vstring_new(char *);
+extern void             vstring_free(struct vstring *);
+extern struct vstring * vstring_copy(struct vstring *);
+extern struct vstring * vstring_from_literal(struct vstring *);
+extern int              vstring_equal(struct vstring *, struct vstring *);
+extern int              vstring_equal_s(struct vstring *, char *);
+extern void             vstring_puts(struct vstring *, char *);
+extern void             vstring_putc(struct vstring *, int);
+extern unsigned         vstring_hash(struct vstring *);
+extern void             vstring_rubout(struct vstring *);
+extern void             vstring_concat(struct vstring *, struct vstring *);
+extern void             directive(struct list *);
+extern void           * safe_malloc(int);
+extern void             fail(char *, ...);
+extern void             out(char *, ...);
+extern void             tokenize(struct vstring *, struct list *);
 

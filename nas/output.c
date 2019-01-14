@@ -30,8 +30,8 @@
 /* write 'length' bytes from 'data' to the output file at 'position'.
    this is here mainly to check for errors. */
 
-output(position, data, length)
-    char * data;
+void
+output(int position, void * data, int length)
 {
     static int current_position = -1;
 
@@ -51,8 +51,8 @@ output(position, data, length)
 /* emit 1, 2, 4, or 8 bytes to the current output segment (text or data).
    on the final pass, actually writes to the file. bumps the counter. */
 
-emit(l, length)
-    long l;
+void
+emit(long l, int length)
 {
     int  position;
     char b;
@@ -82,7 +82,8 @@ emit(l, length)
    going to be emitted with this instruction. needed to properly compute
    rIP-relative operands in the presence of trailing immediate bytes. */
 
-crystal()
+static int
+crystal(void)
 {
     long flags;
     int  i;
@@ -105,8 +106,8 @@ crystal()
    locally. assume rIP is the current location counter plus 'offset'. 
    'flags' is one of O_IMM_* to check that we don't overflow. */
 
-resolve(n, flags, offset)
-    long flags;
+void
+resolve(int n, long flags, int offset)
 {
     int bytes = (segment == OBJ_SYMBOL_SEG_TEXT) ? text_bytes : data_bytes;
 
@@ -127,8 +128,8 @@ resolve(n, flags, offset)
 /* output the value ('symbol' + 'offset') operands[n] to the current segment,
    and, if on the final pass, issue a relocation if necessary. */
 
-reloc(n, flags, rel)
-    long flags;
+void
+reloc(int n, long flags, int rel)
 {
     struct obj_reloc reloc; 
     int              size = 0;
@@ -198,7 +199,8 @@ static struct {     /* 16-bit base/index register combinations. */
 
 #define NR_RM16 (sizeof(rm16) / sizeof(*rm16))
 
-modrm(n, modrm)
+static void
+modrm(int n, int modrm)
 {
     int     i;
     char    sib = 0;
@@ -295,7 +297,8 @@ modrm(n, modrm)
     reloc(n, operands[n].disp, rel);
 }
 
-encode()
+void
+encode(void)
 {
     char byte;
     char rex = 0;

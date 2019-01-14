@@ -37,7 +37,8 @@ static int    list_address = NO_ADDRESS;            /* address this line starts 
 static int    nr_list_bytes;                        /* number of bytes emitted this insn */
 static char   list_bytes[MAX_INSN_LENGTH];          /* buffer */
 
-list_byte(b)
+void
+list_byte(int b)
 {
     if (list_address == NO_ADDRESS) 
         list_address = (segment == OBJ_SYMBOL_SEG_TEXT) ? text_bytes : data_bytes;
@@ -50,16 +51,15 @@ list_byte(b)
 
 /* two simple helper functions for list_line() */
 
-static
-pad(n)
+static void
+pad(int n)
 {
     while (n--) fputc(' ', list_file);
 }
 
 
-static 
-bytes(n, idx)
-    int * idx;
+static void
+bytes(int n, int * idx)
 {
     int i;
 
@@ -76,8 +76,8 @@ bytes(n, idx)
    processed (actually, right before reading any new line, except the first).
    provided it's the final pass and we're generating a listing, that is. */
 
-static 
-list_line()
+static void
+list_line(void)
 {
     int i = 0;
 
@@ -110,8 +110,8 @@ list_line()
 
 /* return the next line of input, or return zero if there isn't another. */
 
-static
-next_line()
+static int
+next_line(void)
 {
     static FILE * file;
 
@@ -145,7 +145,8 @@ next_line()
 
 #define ISALPHA(x)  (isalpha(x) || ((x) == '_') || ((x) == '$'))
 
-scan()
+int
+scan(void)
 {
     char * start;
     char * end;
@@ -194,8 +195,8 @@ scan()
    operands[n]. only supports +/- for now, but can (and will) be 
    expanded with a few primitive operators later. */
 
-static
-expression(n)
+static void
+expression(int n)
 {
     int sign = 1;
 
@@ -245,7 +246,7 @@ expression(n)
         {
         case '+':   sign = 1; break;
         case '-':   sign = -1; break;
-        default:    return 0;
+        default:    return;
         }
 
         scan();
@@ -254,8 +255,8 @@ expression(n)
 
 /* operand() parses an operand into operands[n], and sets applicable flags. */
 
-static
-reg_operand(n)
+static void
+reg_operand(int n)
 {
     int reg;
 
@@ -285,8 +286,8 @@ reg_operand(n)
         error("illegal use of register");
 }
 
-static
-mem_operand(n)
+static void
+mem_operand(int n)
 {
     long disp;
     int  reg;
@@ -414,8 +415,7 @@ mem_operand(n)
 }
 
 long
-classify(offset)
-    long offset;
+classify(long offset)
 {
     long flags = O_IMM_8 | O_IMM_16 | O_IMM_32 | O_IMM_64;
 
@@ -429,8 +429,8 @@ classify(offset)
     return flags;
 }
 
-static
-imm_operand(n)
+static void
+imm_operand(int n)
 {
     struct operand saved_operand;
     int            rel8 = 0;
@@ -452,7 +452,8 @@ imm_operand(n)
     if (rel8) operands[n].flags |= O_REL_8;
 }
 
-operand(n)
+void
+operand(int n)
 {
     operands[n].reg = NONE;
     operands[n].rip = 0;
@@ -481,7 +482,7 @@ operand(n)
 /* convenience function for pseudo-ops that need constant numeric operands */
 
 long
-constant_expression()
+constant_expression(void)
 {
     operand(0);
 

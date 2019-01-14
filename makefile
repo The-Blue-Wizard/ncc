@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wno-implicit-int -Wno-implicit-function-declaration -g
+CFLAGS=-g
 
 all:: ncc nld nobj nexec
 	make CC="$(CC)" CFLAGS="$(CFLAGS)" -C ncpp 

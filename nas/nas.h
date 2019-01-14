@@ -239,7 +239,7 @@ struct name
     struct name       * link;
     struct obj_symbol * symbol;
     struct insn       * insn_entries;
-    int             ( * pseudo )();
+    void            ( * pseudo )(void);
     int                 token;
 };
 
@@ -416,27 +416,34 @@ extern int               bits;
 extern struct insn     * insn;
 extern struct operand    operands[];
 extern int               nr_operands;
-
-extern struct name     * lookup_name();
-extern long              constant_expression();
-extern long              classify();
-extern                   pseudo_byte();
-extern                   pseudo_word();
-extern                   pseudo_dword();
-extern                   pseudo_qword();
-extern                   pseudo_align();
-extern                   pseudo_skip();
-extern                   pseudo_fill();
-extern                   pseudo_ascii();
-extern                   pseudo_global();
-extern                   pseudo_text();
-extern                   pseudo_data();
-extern                   pseudo_bss();
-extern                   pseudo_org();
-extern                   pseudo_bits();
 extern struct obj_header header;
 
-#ifdef __STDC__
-extern void error(char *, ...);
-#endif
-
+extern struct name     * lookup_name(char *, int);
+extern void              reference(struct name *);
+extern void              define(struct name *, long);
+extern long              constant_expression(void);
+extern long              classify(long);
+extern void              pseudo_byte(void);
+extern void              pseudo_word(void);
+extern void              pseudo_dword(void);
+extern void              pseudo_qword(void);
+extern void              pseudo_align(void);
+extern void              pseudo_skip(void);
+extern void              pseudo_fill(void);
+extern void              pseudo_ascii(void);
+extern void              pseudo_global(void);
+extern void              pseudo_text(void);
+extern void              pseudo_data(void);
+extern void              pseudo_bss(void);
+extern void              pseudo_org(void);
+extern void              pseudo_bits(void);
+extern void              error(char *, ...);
+extern void              reloc(int, long, int);
+extern void              encode(void);
+extern void              output(int, void *, int);
+extern void              load_names(void);
+extern int               scan(void);
+extern void              list_byte(int);
+extern void              operand(int);
+extern void              resolve(int, long, int);
+extern void              emit(long, int);

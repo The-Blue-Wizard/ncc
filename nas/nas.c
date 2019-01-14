@@ -57,13 +57,8 @@ struct operand      operands[MAX_OPERANDS];             /* the operands themselv
 
 /* report an error, clean up the output(s), and exit */
 
-#ifdef __STDC__
 void
 error(char * fmt, ...)
-#else
-error(fmt)
-    char * fmt;
-#endif
 {
     va_list args;
 
@@ -93,8 +88,10 @@ error(fmt)
     exit(1);
 }
 
+/* assemble() makes one pass over the input sources */
 
-assemble()
+static void
+assemble(void)
 {
     struct name * name;
     int           i;
@@ -174,7 +171,7 @@ assemble()
         }
 
         if (insn->name == name) 
-            encode(insn);
+            encode();
         else
             error("invalid instruction/operand combination");
 
@@ -184,8 +181,8 @@ assemble()
     }
 }
 
-main(argc, argv)
-    char * argv[];
+int
+main(int argc, char * argv[])
 {
     int opt;
 

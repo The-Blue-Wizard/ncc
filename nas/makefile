@@ -1,4 +1,5 @@
 OBJS=nas.o name.o input.o output.o pseudo.o insn.o
+CFLAGS=
 
 nas: $(OBJS)
 	$(CC) $(CFLAGS) -o nas $(OBJS) 

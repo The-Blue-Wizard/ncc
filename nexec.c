@@ -32,7 +32,7 @@
 #include <string.h>
 #include "a.out.h"
 
-void
+static void
 error(const char * fmt, ...)
 {
     va_list args;

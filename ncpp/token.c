@@ -36,7 +36,7 @@
    vstring to the token. */
 
 struct token * 
-token_new(class)
+token_new(int class)
 {
     struct token * token;
 
@@ -48,8 +48,8 @@ token_new(class)
     token->u.text = NULL;
 }
 
-token_free(token)
-    struct token * token;
+void
+token_free(struct token * token)
 {
     switch (token->class) {
     case TOKEN_NAME:
@@ -66,8 +66,7 @@ token_free(token)
 /* return a new copy of a token. */
 
 struct token *
-token_copy(source)
-    struct token * source;
+token_copy(struct token * source)
 {
     struct token * token;
 
@@ -88,9 +87,8 @@ token_copy(source)
 
 /* returns true if these two tokens are identical. */
 
-token_equal(token1, token2)
-    struct token * token1;
-    struct token * token2;
+int
+token_equal(struct token * token1, struct token * token2)
 {
     if (token1->class != token2->class) return 0;
 
@@ -115,8 +113,8 @@ token_equal(token1, token2)
 
 /* convert a TOKEN_NUMBER to an TOKEN_INT or TOKEN_UNSIGNED, as appropriate */
 
-token_convert_number(token)
-    struct token * token;
+void
+token_convert_number(struct token * token)
 {
     unsigned long value;
     char *        end_ptr;
@@ -158,16 +156,14 @@ static char *token_text[] = /* indices keyed to enumeration in token.h! */
     /* 50 */ "^=", "!", "#", "##", "/", "/=", "~", "...", "##"
 };
 
-static file_helper(file, c) FILE *file; { fputc(c, file); }
-static vstring_helper(vstring, c) struct vstring * vstring; { vstring_putc(vstring, c); }
+static void file_helper(void * data, int c) { FILE *file = data; fputc(c, file); }
+static void vstring_helper(void * data, int c) { struct vstring * vstring = data; vstring_putc(vstring, c); }
 
 #define TOKEN_PRINT_RAW    0     /* print unmodified */
 #define TOKEN_PRINT_ESCAPE 1     /* print escaped (for stringize) */
 
-token_print_internal(token, mode, helper, helper_data)
-    struct token   * token;
-    int          ( * helper )();
-    char           * helper_data;
+static void
+token_print_internal(struct token * token, int mode, void (*helper)(void *, int), void * helper_data)
 {
     char * text;
 
@@ -175,7 +171,7 @@ token_print_internal(token, mode, helper, helper_data)
     case TOKEN_SPACE:
     case TOKEN_UNKNOWN:
         helper(helper_data, token->u.ascii);
-        return 0;
+        return;
 
     case TOKEN_NAME:
     case TOKEN_EXEMPT_NAME:
@@ -201,9 +197,8 @@ token_print_internal(token, mode, helper, helper_data)
 /* token_print() prints an unmodified token to a file. 
    (this is the only print function exported publicly.) */
 
-token_print(token, file)
-    struct token * token;
-    FILE         * file;
+void
+token_print(struct token * token, FILE * file)
 {
     token_print_internal(token, TOKEN_PRINT_RAW, file_helper, file);
 }
@@ -211,7 +206,7 @@ token_print(token, file)
 /* allocate and initialize a new list */
 
 struct list *
-list_new()
+list_new(void)
 {
     struct list * list;
 
@@ -226,10 +221,8 @@ list_new()
 /* insert a token into 'list' before 'before' (NULL means end of list).
    list takes ownership of the token. */
 
-list_insert(list, token, before)
-    struct list  * list;
-    struct token * token;
-    struct token * before;
+void
+list_insert(struct list * list, struct token * token, struct token * before)
 {
     token->next = before;
 
@@ -253,9 +246,7 @@ list_insert(list, token, before)
    for convenience, returns the token that followed the unlinked token. */
 
 struct token *
-list_unlink(list, token)
-    struct list  * list;
-    struct token * token;
+list_unlink(struct list * list, struct token * token)
 {
     if (token->previous)
         token->previous->next = token->next;
@@ -275,9 +266,7 @@ list_unlink(list, token)
    returns the token that used to follow the deleted token. */
 
 struct token *
-list_delete(list, token)
-    struct list  * list;
-    struct token * token;
+list_delete(struct list * list, struct token * token)
 {
     struct token * next;
 
@@ -289,10 +278,8 @@ list_delete(list, token)
 /* move at most 'count' tokens from the source list to the destination
    list before 'before'. if count is -1, then all tokens are moved. */
 
-list_move(destination, source, count, before)
-    struct list  * destination;
-    struct list  * source;
-    struct token * before;
+void
+list_move(struct list * destination, struct list * source, int count, struct token * before)
 {
     struct token * token;
 
@@ -308,8 +295,7 @@ list_move(destination, source, count, before)
 /* return a new copy of a list. */
 
 struct list *
-list_copy(source)
-    struct list * source;
+list_copy(struct list * source)
 {
     struct list *  destination;
     struct token * cursor;
@@ -324,9 +310,8 @@ list_copy(source)
 
 /* remove all tokens from the front of the list before 'token' */
 
-list_cut(list, token)
-    struct list * list;
-    struct token * token;
+void
+list_cut(struct list * list, struct token * token)
 {
     while (list->first != token) list_delete(list, list->first);
 }
@@ -339,8 +324,8 @@ list_cut(list, token)
    LIST_TRIM_FOLD: fold consecutive whitespaces into one 
    LIST_TRIM_STRIP: remove all spaces, wherever they are */
 
-list_trim(list, mode)
-    struct list * list;
+void
+list_trim(struct list * list, int mode)
 {
     struct token * cursor;
     struct token * space;
@@ -373,16 +358,16 @@ list_trim(list, mode)
 
 /* empty the contents of the list. */
 
-list_clear(list)
-    struct list * list;
+void
+list_clear(struct list * list)
 {
     while (list->count) list_delete(list, list->first);
 }
 
 /* free a list (and all of its contents) */
 
-list_free(list)
-    struct list * list;
+void
+list_free(struct list * list)
 {
     list_clear(list);
     free(list);
@@ -391,9 +376,8 @@ list_free(list)
 /* returns non-zero if the lists contain the same exact tokens.
    either list1 or list2 (or both) may be NULL. */
 
-list_equal(list1, list2)
-    struct list * list1;
-    struct list * list2;
+int
+list_equal(struct list * list1, struct list * list2)
 {
     struct token * token1;
     struct token * token2;
@@ -422,8 +406,7 @@ list_equal(list1, list2)
    returns an unquoted string with spaces removed. */
 
 struct vstring *
-list_glue(list, mode)
-    struct list * list;
+list_glue(struct list * list, int mode)
 {
     struct vstring * vstring;
     struct token   * token;
@@ -456,9 +439,7 @@ list_glue(list, mode)
 /* return the token that results from pasting 'left' and 'right' together. */
 
 struct token *
-token_paste(left, right)
-    struct token * left;
-    struct token * right;
+token_paste(struct token * left, struct token * right)
 {
     struct vstring * vstring;
     struct list *    list;
@@ -480,9 +461,8 @@ token_paste(left, right)
 
 /* convert a string to a collection of tokens - i.e., perform lexical analysis. */
 
-tokenize(vstring, list)
-    struct vstring * vstring;
-    struct list    * list;
+void
+tokenize(struct vstring * vstring, struct list * list)
 {
     struct token * token;
     char *         cp = vstring->data;

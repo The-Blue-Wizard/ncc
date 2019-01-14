@@ -29,9 +29,8 @@
    .dword <dword> [ , <dword> ...] 
    .qword <qword> [ , <qword> ...] */
 
-static
-pseudo_bwdq(flags)
-    long flags;
+static void
+pseudo_bwdq(long flags)
 {
     for (;;) {
         operand(0);
@@ -51,14 +50,15 @@ pseudo_bwdq(flags)
     }
 }
 
-pseudo_byte() { pseudo_bwdq(O_IMM_8); }
-pseudo_word() { pseudo_bwdq(O_IMM_16); }
-pseudo_dword() { pseudo_bwdq(O_IMM_32); }
-pseudo_qword() { pseudo_bwdq(O_IMM_64); }
+void pseudo_byte(void) { pseudo_bwdq(O_IMM_8); }
+void pseudo_word(void) { pseudo_bwdq(O_IMM_16); }
+void pseudo_dword(void) { pseudo_bwdq(O_IMM_32); }
+void pseudo_qword(void) { pseudo_bwdq(O_IMM_64); }
 
 /* .align <#> */
 
-pseudo_align()
+void
+pseudo_align(void)
 {
     long    boundary;
     char    fill = 0;
@@ -89,7 +89,8 @@ pseudo_align()
     }
 }
 
-pseudo_skip()
+void
+pseudo_skip(void)
 {
     long length;
     char fill = 0;
@@ -99,7 +100,8 @@ pseudo_skip()
     while (length--) emit(fill, 1);
 }
 
-pseudo_fill()
+void
+pseudo_fill(void)
 {
     long length;
     char fill = 0;
@@ -114,7 +116,8 @@ pseudo_fill()
 
 /* .org <address> */
 
-pseudo_org()
+void
+pseudo_org(void)
 {
     long target;
     char fill = 0;
@@ -138,19 +141,22 @@ pseudo_org()
 
    select output segment */
 
-pseudo_text()
+void
+pseudo_text(void)
 {
     segment = OBJ_SYMBOL_SEG_TEXT;
 }
 
-pseudo_data()
+void
+pseudo_data(void)
 {
     segment = OBJ_SYMBOL_SEG_DATA;
 }
 
 /* .bss <symbol>, <size> [ , <align> ] */
 
-pseudo_bss()
+void
+pseudo_bss(void)
 {
     struct name * name;
     long          number;
@@ -188,7 +194,8 @@ pseudo_bss()
    by single or double quote. the scanner is bypassed since no other part
    of the assembler cares about strings. */
 
-pseudo_ascii()
+void
+pseudo_ascii(void)
 {
     int delimiter;
 
@@ -215,7 +222,8 @@ pseudo_ascii()
 
 /* .global <name> - mark a symbol for external linkage */
 
-pseudo_global()
+void
+pseudo_global(void)
 {
     if (token != NAME) error("name expected");
     reference(name_token);
@@ -225,7 +233,8 @@ pseudo_global()
 
 /* .bits <#> - set assembly mode */
 
-pseudo_bits()
+void
+pseudo_bits(void)
 {
     if (token != NUMBER) error(".bits takes a numeric operand");
 

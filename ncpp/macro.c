@@ -49,7 +49,8 @@ static struct macro * buckets[NR_BUCKETS];
 
 /* callied during initialization to create the predefined macro entries. */
 
-macro_predefine()
+void
+macro_predefine(void)
 {
     static char *    names[] = { "__LINE__", "__FILE__", "__DATE__", 
                                  "__TIME__", "defined" };
@@ -66,9 +67,8 @@ macro_predefine()
     }
 }
 
-static
-macro_update(macro)
-    struct macro * macro;
+static void
+macro_update(struct macro * macro)
 {
     static char      buffer[64];
     struct token *   token;
@@ -102,41 +102,33 @@ macro_update(macro)
             break;
 
         case PREDEFINED_TIME:
-            if (macro->replacement) return 0;
+            if (macro->replacement) return;
             macro->replacement = list_new();
             time(&epoch);
             token = token_new(TOKEN_STRING);
             token->u.text = vstring_new(NULL);
             vstring_putc(token->u.text, '"');
-#if 0
             strftime(buffer, sizeof(buffer), "%H:%M:%S", localtime(&epoch));
-#else
-            sprintf(buffer, "--TIME--");
-#endif
             vstring_puts(token->u.text, buffer);
             vstring_putc(token->u.text, '"');
             list_insert(macro->replacement, token, NULL);
             break;
 
         case PREDEFINED_DATE:
-            if (macro->replacement) return 0;
+            if (macro->replacement) return;
             macro->replacement = list_new();
             time(&epoch);
             token = token_new(TOKEN_STRING);
             token->u.text = vstring_new(NULL);
             vstring_putc(token->u.text, '"');
-#if 0
             strftime(buffer, sizeof(buffer), "%b %d %Y", localtime(&epoch));
-#else
-            sprintf(buffer, "--TIME--");
-#endif
             vstring_puts(token->u.text, buffer);
             vstring_putc(token->u.text, '"');
             list_insert(macro->replacement, token, NULL);
             break;
 
         case PREDEFINED_DEFINED:
-            if (macro->replacement) return 0;
+            if (macro->replacement) return;
             macro->replacement = list_new();
             token = token_new(TOKEN_EXEMPT_NAME);
             token->u.text = vstring_new("defined");
@@ -154,8 +146,7 @@ macro_update(macro)
    (the caller can tell the entry is new if 'replacement' is NULL). */
 
 struct macro *
-macro_lookup(name, mode)
-    struct vstring * name;
+macro_lookup(struct vstring * name, int mode)
 {
     struct macro * macro;
     int            bucket;
@@ -187,10 +178,8 @@ macro_lookup(name, mode)
    NULL, indicating an object-like macro. the caller yields ownership of the 
    'replacement' and 'argument' (if applicable) token lists. */
 
-macro_define(name, arguments, replacement)
-    struct vstring * name;
-    struct list    * arguments;
-    struct list    * replacement;
+void
+macro_define(struct vstring * name, struct list * arguments, struct list * replacement)
 {
     struct macro * macro;
     int            argument_no;
@@ -262,8 +251,8 @@ macro_define(name, arguments, replacement)
 
 /* remove a macro from the hash table. */
 
-macro_undef(name)
-    struct vstring * name;
+void
+macro_undef(struct vstring * name)
 {
     struct macro *  macro;
     struct macro ** ptr;
@@ -281,7 +270,6 @@ macro_undef(name)
             list_free(macro->replacement);
             if (macro->arguments) list_free(macro->arguments);
             free(macro);
-            return 0;
         }
         ptr = &((*ptr)->link);
     }
@@ -290,8 +278,8 @@ macro_undef(name)
 /* take a string of the form <macro_name>[=<replacement>] (from
    a command-line option) and define it in the macro table. */
 
-macro_option(option)
-    char * option;
+void
+macro_option(char * option)
 {
     struct list *    replacement;
     struct vstring * vstring;
@@ -326,10 +314,8 @@ macro_option(option)
 /* 'source' begins with a left parenthesis; destructively parse exactly nr_arguments
    actual arguments to a macro invocation into arguments[]. */
 
-static 
-actual_arguments(arguments, nr_arguments, source)
-    struct list ** arguments;
-    struct list * source;
+static void
+actual_arguments(struct list ** arguments, int nr_arguments, struct list * source)
 {
     int argument_no = 0;
     int parentheses;
@@ -366,10 +352,8 @@ actual_arguments(arguments, nr_arguments, source)
 /* if the source begins with a macro that needs replacement, then replace it.
    returns non-zero if replacement took place, otherwise zero. */
 
-static 
-replace1(destination, source)
-    struct list * destination;
-    struct list * source;
+static int
+replace1(struct list * destination, struct list * source)
 {
     struct macro *   macro;
     struct list **   arguments;
@@ -474,8 +458,8 @@ replace1(destination, source)
    replacements are made. (the main loop calls this with 
    MODE_REPLACE_ONCE because it rescans the input itself). */
 
-macro_replace(list, mode)
-    struct list * list;
+void
+macro_replace(struct list * list, int mode)
 {
     struct list *  source;
     int            changes;

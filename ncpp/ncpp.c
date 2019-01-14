@@ -26,6 +26,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include "ncpp.h"
 
 struct vstring *   output_path;
@@ -41,11 +42,8 @@ FILE *             output_file;
 
    other specifiers are just ignored. */
 
-static 
-print(file, fmt, args)
-    FILE    * file;
-    char    * fmt;
-    va_list   args;
+static void
+print(FILE * file, char * fmt, va_list args)
 {
     struct vstring * vstring;
 
@@ -82,13 +80,8 @@ print(file, fmt, args)
 
 /* invoke print() on output_file. */
 
-#ifdef __STDC__
 void
 out(char * fmt, ...)
-#else
-out(fmt)
-    char * fmt;
-#endif
 {
     va_list args;
 
@@ -100,13 +93,8 @@ out(fmt)
 /* report an error to the user, clean up, and exit.
    format specifiers and arguments are processed by print(), above. */
 
-#ifdef __STDC__
 void
 fail(char * fmt, ...)
-#else
-fail(fmt)
-    char * fmt;
-#endif
 {
     va_list args;
 
@@ -132,13 +120,12 @@ fail(fmt)
 
 /* a simple wrapper to use instead of malloc() */
 
-char *
-safe_malloc(sz)
+void *
+safe_malloc(int sz)
 {
-    char * p = malloc(sz);
+    void * p = malloc(sz);
 
     if (p == NULL) fail("out of memory");
-
     return p;
 }
 
@@ -148,8 +135,8 @@ safe_malloc(sz)
 
 #define SYNC_WINDOW 10
 
-static
-sync()
+static void
+sync_line(void)
 {
     static struct vstring * path;
     static int              line_number;
@@ -179,10 +166,8 @@ sync()
    onto the end of 'list'. returns non-zero on success, or zero if 
    there is no more input. */
 
-static
-fill(mode, list)
-    int           mode;
-    struct list * list;
+static int
+fill(int mode, struct list * list)
 {
     struct vstring * line;
 
@@ -196,8 +181,8 @@ fill(mode, list)
 
 /* subject the first 'count' tokens of 'list' to macro replacement. */
 
-replace_tokens(list, count)
-    struct list * list;
+static void
+replace_tokens(struct list * list, int count)
 {
     struct list * replace_list;
 
@@ -213,10 +198,8 @@ replace_tokens(list, count)
    parenthesis is found, the return value is either 0 (no action 
    required) or -1 (additional lines were read, fixup is required). */
 
-static
-match_parentheses(list, start)
-    struct list  * list;
-    struct token * start;
+static int
+match_parentheses(struct list * list, struct token * start)
 {
     int            no_match = 0;
     struct token * cursor;
@@ -261,8 +244,8 @@ match_parentheses(list, start)
 /* main() seeds the keyword strings, processes the command line arguments, 
    and then loops copying input to output until there's no more. no surprises here. */
 
-main(argc, argv)
-    char ** argv;
+int
+main(int argc, char ** argv)
 {
     struct vstring * input_path;
     struct list *    list;
@@ -339,7 +322,7 @@ main(argc, argv)
             }
         }
 
-        sync();
+        sync_line();
 
         if (list->count) {
             if (list->first->class != TOKEN_SPACE)

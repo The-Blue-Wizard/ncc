@@ -24,12 +24,14 @@
 
 #include <stdio.h>
 #include <stddef.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 char * libs[] =
 {

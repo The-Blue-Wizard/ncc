@@ -52,10 +52,8 @@ static char * digits = "0123456789ABCDEF";
 #define isodigit(x)     (isdigit(x) && ((x) != '8') && ((x) != '9'))
 #define digit_value(x)  (strchr(digits, toupper(x)) - digits)
 
-static 
-escape(cp, c)
-    char ** cp;
-    int   * c;
+static int
+escape(char ** cp, int * c)
 {
     if (isodigit(**cp)) {
         *c = digit_value(**cp);
@@ -134,8 +132,7 @@ escape(cp, c)
    escape sequences. if the literal contains illegal escape sequences, return NULL. */
 
 struct vstring *
-vstring_from_literal(literal)
-    struct vstring * literal;
+vstring_from_literal(struct vstring * literal)
 {
     struct vstring * raw;
     char           * cp;
@@ -168,8 +165,7 @@ vstring_from_literal(literal)
    then the vstring is initialized with the contents of the C-style string 's'. */
 
 struct vstring *
-vstring_new(s)
-    char * s;
+vstring_new(char * s)
 {
     struct vstring * vstring = (struct vstring *) safe_malloc(sizeof(struct vstring));
 
@@ -185,9 +181,8 @@ vstring_new(s)
 /* append the contents of the source string to the destination string.
    the source string is unmodified. */
 
-vstring_concat(destination, source)
-    struct vstring * destination;
-    struct vstring * source;
+void
+vstring_concat(struct vstring * destination, struct vstring * source)
 {
     int i = 0;
 
@@ -197,8 +192,7 @@ vstring_concat(destination, source)
 /* create a new vstring initialized with the contents of another vstring. */
 
 struct vstring *
-vstring_copy(source)
-    struct vstring * source;
+vstring_copy(struct vstring * source)
 {
     struct vstring * vstring;
 
@@ -210,8 +204,8 @@ vstring_copy(source)
 
 /* free a vstring, and its associated storage if present. */
 
-vstring_free(vstring)
-    struct vstring * vstring;
+void
+vstring_free(struct vstring * vstring)
 {
     if (vstring->data) free(vstring->data);
     free(vstring);
@@ -219,17 +213,15 @@ vstring_free(vstring)
 
 /* return true if string contents are equal */
 
-vstring_equal(vstring1, vstring2)
-    struct vstring * vstring1;
-    struct vstring * vstring2;
+int
+vstring_equal(struct vstring * vstring1, struct vstring * vstring2)
 {
     if (vstring1->length != vstring2->length) return 0;
     return (memcmp(vstring1->data, vstring2->data, vstring1->length) == 0);
 }
 
-vstring_equal_s(vstring, s)
-    struct vstring * vstring;
-    char           * s;
+int
+vstring_equal_s(struct vstring * vstring, char * s)
 {
     int length = strlen(s);
 
@@ -240,8 +232,8 @@ vstring_equal_s(vstring, s)
 /* add a char to the end of a vstring, increasing the capacity and
    (re)allocating storage if necessary */
 
-vstring_putc(vstring, c)
-    struct vstring * vstring;
+void
+vstring_putc(struct vstring * vstring, int c)
 {
     if (vstring->length == vstring->capacity) {
         if (vstring->capacity == 0) {
@@ -262,9 +254,8 @@ vstring_putc(vstring, c)
 
 /* add a null-terminated string to the end of a vstring. */
 
-vstring_puts(vstring, s)
-    struct vstring * vstring;
-    char           * s;
+void
+vstring_puts(struct vstring * vstring, char * s)
 {
     while (*s) vstring_putc(vstring, *s++);
 }
@@ -272,8 +263,8 @@ vstring_puts(vstring, s)
 
 /* erase the last character from the string (if any) */
 
-vstring_rubout(vstring)
-    struct vstring * vstring;
+void
+vstring_rubout(struct vstring * vstring)
 {
     if (vstring->length) {
         vstring->length--;
@@ -284,8 +275,7 @@ vstring_rubout(vstring)
 /* return a hash value for the string */
 
 unsigned
-vstring_hash(vstring)
-    struct vstring * vstring;
+vstring_hash(struct vstring * vstring)
 {
     unsigned hash = 0;
     int      i;

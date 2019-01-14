@@ -41,8 +41,8 @@ static int                compiling = 1;
 /* update the compiling flag based on the state of 
    the condition stack. */
 
-static 
-check_compiling()
+static void
+check_compiling(void)
 {
     struct condition * condition;
 
@@ -54,8 +54,8 @@ check_compiling()
 
 /* create a new condition and put it on top of the stack. */
 
-static 
-condition_new()
+static void
+condition_new(void)
 {
     struct condition * condition;
 
@@ -69,8 +69,8 @@ condition_new()
 
 /* pop the most recent condition off the stack and free it. */
 
-static 
-condition_pop()
+static void
+condition_pop(void)
 {
     struct condition * condition;
 
@@ -91,9 +91,8 @@ condition_pop()
 #define PRECEDENCE_BIT_XOR              7
 #define PRECEDENCE_BIT_OR               8
 
-static 
-token_precedence(token)
-    struct token * token;
+static int
+token_precedence(struct token * token)
 {
     switch (token->class) {
     case TOKEN_MUL:
@@ -136,36 +135,35 @@ token_precedence(token)
 #define PARSE_EVALUATE  0
 #define PARSE_SKIP      1
 
-static parse_expression();
+static void parse_expression(struct list *, int);
 
-static 
-parse_unary(list, mode)
-    struct list * list;
+static void
+parse_unary(struct list * list, int mode)
 {
     if (list->first) {
         switch (list->first->class) {
         case TOKEN_PLUS:
             list_delete(list, list->first);
             parse_unary(list, mode);
-            return 0;
+            return;
 
         case TOKEN_MINUS:
             list_delete(list, list->first);
             parse_unary(list, mode);
             list->first->u.int_value = -(list->first->u.int_value);
-            return 0;
+            return;
 
         case TOKEN_TILDE:
             list_delete(list, list->first);
             parse_unary(list, mode);
             list->first->u.int_value = ~(list->first->u.int_value);
-            return 0;
+            return;
 
         case TOKEN_NOT:
             list_delete(list, list->first);
             parse_unary(list, mode);
             list->first->u.int_value = !(list->first->u.int_value);
-            return 0;
+            return;
 
         case TOKEN_LPAREN:
             list_delete(list, list->first);
@@ -175,22 +173,21 @@ parse_unary(list, mode)
                 fail("missing closing parenthesis in expression");
 
             list_delete(list, list->first->next);
-            return 0;
+            return;
 
         case TOKEN_NUMBER:
             token_convert_number(list->first);
         case TOKEN_INT:
         case TOKEN_UNSIGNED:
-            return 0;
+            return;
         }
     }
 
     fail("expression expected");
 }
 
-static 
-parse_binary(precedence, list, mode)
-    struct list * list;
+static void
+parse_binary(int precedence, struct list * list, int mode)
 {
     if (precedence == PRECEDENCE_NONE)
         return parse_unary(list, mode);
@@ -328,9 +325,8 @@ parse_binary(precedence, list, mode)
     }
 }
 
-static
-parse_and(list, mode)
-    struct list * list;
+static void
+parse_and(struct list * list, int mode)
 {
     int left;
 
@@ -346,9 +342,8 @@ parse_and(list, mode)
     }
 }
 
-static
-parse_or(list, mode)
-    struct list * list;
+static void
+parse_or(struct list * list, int mode)
 {
     int left;
 
@@ -364,9 +359,8 @@ parse_or(list, mode)
     }
 }
 
-static
-parse_expression(list, mode)
-    struct list * list;
+static void
+parse_expression(struct list * list, int mode)
 {   
     struct token * result;
     int            control;
@@ -399,9 +393,8 @@ parse_expression(list, mode)
 /* evaluate an expression and returns true if the expression
    is true, or false otherwise. */
 
-static 
-expression(list)
-    struct list * list;
+static int
+expression(struct list * list)
 {
     struct token * cursor;
     int            parentheses; 
@@ -464,8 +457,8 @@ expression(list)
    directive() to check for, and act on, directives. this function 
    also deletes tokens when in a region that is excluded by #if/#ifdef etc. */
 
-directive(list)
-    struct list * list;
+void
+directive(struct list * list)
 {
     struct token *   cursor;
     struct vstring * directive_name = NULL;
