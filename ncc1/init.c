@@ -114,7 +114,6 @@ initialize_array(struct type * type, int outermost)
     int           braced = 0;
 
     element_type = type->next;
-    if (outermost) expect(KK_LBRACE);
 
     if (token.kk == KK_LBRACE) {
         ++braced;
@@ -127,6 +126,8 @@ initialize_array(struct type * type, int outermost)
         output_string(token.u.text, nr_elements);
         lex();
     } else {
+        if (outermost && !braced) error(ERROR_BADINIT);
+
         for (;;) {
             initialize(element_type, 0);
             ++nr_elements;
