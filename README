@@ -18,16 +18,7 @@ the exception of the aforementioned wide characters/strings (which I have
 purposely excluded, because they are mostly useless). I would appreciate
 feedback if any non-standard behavior is observed. 
 
-roadmap:
-
-I will be putting together a simple test suite (which will run with the 
-help of 'nexec'), then return my attention to the optimizer, where the 
-first orders of business will be register coalescing and copy/constant 
-propagation. The output from the code generator is especially amenable to
-these transformations, which will greatly improve the compiler output. 
-After a few minor changes to the accompanying utilities (to add archive 
-support to the linker, mostly), and some heavy testing, a stable 1.0
-release suitable for general use should be ready.
+See ROADMAP for the path to a 1.0 stable release.
 
 ===========================================================================
 

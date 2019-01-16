@@ -1,0 +1,55 @@
+GENERAL
+=======
+
+- test suite
+	
+    nothing fancy, but some testing framework is required to make sure nothing
+    gets broken, especially as the optimizer gets more aggressive.
+
+- archives
+
+    need an 'ar'-style librarian and support for archive files in nld 
+
+
+CODE GENERATION IMPROVEMENTS (ncc)
+==================================
+
+- struct assignment
+
+    should inline copies where appropriate (e.g., small structures) rather
+    than calling a library function. the synthetic I_BLKCPY instruction should 
+    probably go away, and instead make the inline copy or library-call explicit
+    in the IR so the code is available to the optimizer.
+
+- switch statements
+
+    the code generated is very naive. for small numbers of switch cases this
+    is appropriate, but for larger switches a binary search should be used,
+    either through (1) direct tests or (2) a table and a library function. the
+    choice of (1) or (2) would probably be dependent on the size of the switch.
+
+- register coalescing
+
+    computations involving a temporary should compute directly into the target
+    register when possible
+
+- copy propagation
+    
+    registers that mirror other registers can be eliminated and replaced with
+    the source registers
+
+- fuse loads/stores for aliased variables in register allocator
+
+    explicit loads or stores of aliased variables can be replaced with memory 
+    operands (see rewrite() in gen.c)
+
+- constant propagation
+
+    registers with known constant values can be replaced with immediate operands
+
+these last two but will require some means of determining which instructions 
+allow which combinations of operands.
+
+improving the compiler output wll be a never-ending task, but implementing these
+changes will go a long way towards making the output "good enough" for now.
+
