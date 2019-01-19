@@ -1,0 +1,5 @@
+/* allow identical redefinitions */
+
+#define X 2 3 ( ) "hello"
+#define X 2 3 ( ) "hello"
+X

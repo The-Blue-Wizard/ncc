@@ -21,3 +21,5 @@ clean::
 	make -C ncc1 clean
 	make -C nas clean
 
+test:: all
+	(cd test; ./run_tests.sh)
