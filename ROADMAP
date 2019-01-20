@@ -1,10 +1,31 @@
+ANSI CONFORMANCE
+================
+
+for 100% ANSI compliance, the follow need to be addressed. these
+are all really minor issues:
+
+- concatenatation of adjacent string literals
+
+- ANSI char escape sequences (esp. hex)
+
+- wide character constants and string literals (*)
+
+- trigraphs (*)
+
+- initialization of unions
+
+- disallow 'auto' storage class in function formal arguments
+
+(*) = does anyone really care?
+
+
 GENERAL
 =======
 
 - test suite
-	
-    nothing fancy, but some testing framework is required to make sure nothing
-    gets broken, especially as the optimizer gets more aggressive.
+
+    framework is complete(-ish), but need to add test cases.
+    the number of cases will ultimately be in the hundreds.
 
 - archives
 
@@ -18,7 +39,7 @@ CODE GENERATION IMPROVEMENTS (ncc)
 
     should inline copies where appropriate (e.g., small structures) rather
     than calling a library function. the synthetic I_BLKCPY instruction should 
-    probably go away, and instead make the inline copy or library-call explicit
+    probably go away, and instead make the inline copy or library call explicit
     in the IR so the code is available to the optimizer.
 
 - switch statements
@@ -36,7 +57,7 @@ CODE GENERATION IMPROVEMENTS (ncc)
 - copy propagation
     
     registers that mirror other registers can be eliminated and replaced with
-    the source registers
+    the source registers. 
 
 - fuse loads/stores for aliased variables in register allocator
 
