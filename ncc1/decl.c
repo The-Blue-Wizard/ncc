@@ -251,7 +251,7 @@ static struct
     { KK_TS_SIGNED,                                 T_INT },
     { KK_TS_SIGNED | KK_TS_INT,                     T_INT },
     { KK_TS_UNSIGNED,                               T_UINT },
-    { KK_TS_UNSIGNED | KK_TS_UNSIGNED,              T_UINT },
+    { KK_TS_UNSIGNED | KK_TS_INT,                   T_UINT },
     { KK_TS_UNSIGNED | KK_TS_CHAR,                  T_UCHAR },
     { KK_TS_CHAR,                                   T_CHAR },
     { KK_TS_SIGNED | KK_TS_CHAR,                    T_SCHAR },
