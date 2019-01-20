@@ -1,2 +1,6 @@
 *.test.err
 *.test.out
+*.test.tmp
+support.o
+support_c.i
+support_c.s

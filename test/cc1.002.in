@@ -1,0 +1,11 @@
+/* ensure support library seems to work */
+
+#include "support.h"
+
+int
+main(void)
+{
+	puts("hello, world");
+	return 0;
+}
+

@@ -20,6 +20,7 @@ clean::
 	make -C ncpp clean
 	make -C ncc1 clean
 	make -C nas clean
+	rm -f test/*.test.* test/support_c.i test/support_c.s test/support.o
 
 test:: all
 	(cd test; ./run_tests.sh)

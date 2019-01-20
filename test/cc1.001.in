@@ -1,0 +1,10 @@
+/* just make sure cc1 test chain works */
+
+#include "support.h"
+
+int
+main(void)
+{
+	return 0;
+}
+
