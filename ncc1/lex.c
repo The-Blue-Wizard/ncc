@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <ctype.h>
+#include <float.h>
 #include "ncc1.h"
 
 static int    yych;         /* current input character */
@@ -59,7 +60,6 @@ fcon(void)
 
     if (toupper(yych) == 'F') {
         kk = KK_FCON;
-        token.u.f = strtof(yytext, &endptr);
         yynext();
     } else {
         if (toupper(yych) == 'L') {
@@ -67,12 +67,15 @@ fcon(void)
             kk = KK_LDCON;
         } else
             kk = KK_DCON;
-
-        token.u.f = strtod(yytext, &endptr);
     }
 
+    token.u.f = strtod(yytext, &endptr);
     if (errno == ERANGE) error(ERROR_FRANGE);
     if (errno || *endptr) error(ERROR_BADFCON);
+
+    if ((kk == KK_FCON) && ((token.u.f < FLT_MIN) || (token.u.f > FLT_MAX)))
+        error(ERROR_FRANGE);
+
     return kk;
 }
 
@@ -604,7 +607,7 @@ peek(struct string ** id)
     yylex()
         the scanner proper, divides the input into tokens */
 
-static int
+static void
 ylex(void)
 {
     if (next.kk == KK_NONE) {
@@ -615,7 +618,7 @@ ylex(void)
     }
 }
 
-int
+void
 lex(void)
 {
     ylex();

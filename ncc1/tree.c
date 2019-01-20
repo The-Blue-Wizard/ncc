@@ -661,6 +661,8 @@ pre_or_post(struct tree * tree, int op, int kk)
     tree = new_tree(E_ADD, copy_type(tree->type), tree, one);
     tree = scale_pointers(tree);
     tree->op = op;
+
+    return tree;
 }
 
 /* the rest of the file comprises a conventional recursive-descent

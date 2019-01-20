@@ -94,7 +94,7 @@ void                     reloc_phase(struct object *);
 void                     walk_objects(void (*)(struct object *));
 void                     open_object(struct object *);
 void                     close_object(struct object *);
-struct object          * new_object(char *);
+void                     new_object(char *);
 int                      import(char *);
 void                     pad(int, int);
 void                     debug_info(void);
@@ -299,7 +299,7 @@ close_object(struct object * object)
 
 /* create a new object, and read in its metadata */
 
-struct object *
+void
 new_object(char * path)
 {
     struct object * object;

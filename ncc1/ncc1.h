@@ -101,7 +101,7 @@ extern struct block *   last_block;
 extern void            error(int);
 extern void            compound(void);
 extern void            yyinit(void);
-extern int             lex(void);
+extern void            lex(void);
 extern int             peek(struct string **);
 extern void            expect(int);
 extern void            match(int);

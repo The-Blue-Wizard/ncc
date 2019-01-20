@@ -199,7 +199,7 @@ pseudo_ascii(void)
 {
     int delimiter;
 
-    operands[0].kind == OPERAND_IMM;
+    operands[0].kind = OPERAND_IMM;
     operands[0].symbol = NULL;
     operands[0].flags = O_IMM_8;
 
