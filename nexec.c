@@ -86,7 +86,6 @@ main(int argc, char * argv[])
     if (read(fd, base, exec.a_text + exec.a_data) != (exec.a_text + exec.a_data))
         error("can't read a.out: short read");
     entry = (int (*)(void)) (long) exec.a_entry;
-    fprintf(stderr, "exit code = %d\n", entry());
-    return 0;
+    return entry();
 }
 
