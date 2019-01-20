@@ -627,6 +627,7 @@ struct insn insns[] =
     { "rdmsr", 0, { }, 2, { 0x0F, 0x32 }, 0 },
     { "wrmsr", 0, { }, 2, { 0x0F, 0x30 }, 0 },
     { "sfence", 0, { }, 3, { 0x0F, 0xAE, 0xF8 }, 0 },
+    { "syscall", 0, { }, 2, { 0x0F, 0x05 }, 0 },
 
     { "movnti", 2, { O_MEM_32 | O_I_MODRM, O_REG_32 | O_I_MIDREG }, 3, { 0x0F, 0xC3, 0 }, I_DATA_32 },
     { "movnti", 2, { O_MEM_64 | O_I_MODRM, O_REG_64 | O_I_MIDREG }, 3, { 0x0F, 0xC3, 0 }, I_DATA_64 },
