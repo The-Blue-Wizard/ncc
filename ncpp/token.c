@@ -46,6 +46,8 @@ token_new(int class)
     token->previous = NULL;
     token->next = NULL;
     token->u.text = NULL;
+
+    return token;
 }
 
 void
