@@ -597,7 +597,12 @@ token_tree(int kk, struct tree * left, struct tree * right, struct tree * condit
 }
 
 /* peek into the future and return true if it looks like
-   a type specifier, or false otherwise. */
+   a type specifier, or false otherwise.
+
+   note that storage classes aren't type specifiers, but 
+   they might appear in prototype arguments, so we call
+   them type specifiers for our purposes here. any illegal
+   short classes will be caught by the parser later. */
 
 int
 peek_type_specifier(void)
@@ -622,6 +627,13 @@ peek_type_specifier(void)
     case KK_DOUBLE:
     case KK_UNSIGNED:
     case KK_VOID:
+    case KK_CONST:
+    case KK_VOLATILE:
+    case KK_REGISTER:
+    case KK_AUTO:
+    case KK_TYPEDEF:
+    case KK_EXTERN:
+    case KK_STATIC:
         return 1;
     }
 
