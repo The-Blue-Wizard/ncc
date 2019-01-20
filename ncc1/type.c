@@ -64,6 +64,7 @@ struct proto *
 copy_proto(struct proto * proto)
 {
     ++proto->refs;
+    return proto;
 }
 
 /* "free" a proto, i.e., decrement its ref count and 
