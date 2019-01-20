@@ -1,4 +1,4 @@
-/* ensure support library seems to work */
+/* exercise support library */
 
 #include "support.h"
 
@@ -6,6 +6,12 @@ int
 main(void)
 {
 	puts("hello, world");
+	putn(0);
+	putn(-1);
+	putn(-2147483647);
+	putn(2147483648);
+	putn(9223372036854775807);
+	putn(-9223372036854775808);
 	return 0;
 }
 
