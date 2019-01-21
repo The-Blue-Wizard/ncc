@@ -1,4 +1,4 @@
-/* example #4 from ANSI C89 standard, 6.8.3.5 */
+/* modified example #4 from ANSI C89 standard, 6.8.3.5 */
 
 #define str(s)		# s
 #define xstr(s)		str(s)
@@ -13,6 +13,6 @@
 debug(1, 2);
 fputs(str(strncmp("abc\0d", "abc", '\4')  /* this goes away */
    == 0) str(: @\n), s);
-/* #include xstr(INCFILE(2).h) */
+#include xstr(INCFILE(2).h) 
 glue(HIGH, LOW);
 xglue(HIGH, LOW)

@@ -1,0 +1,11 @@
+/* make sure #undef works properly */
+
+#define x 32
+x
+#undef x
+#define x 64
+#define y 128
+x y
+#undef x
+#define x(a) #a
+x(test)

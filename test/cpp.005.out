@@ -1,0 +1,23 @@
+# 1 "cpp.005.in"
+
+
+
+
+
+
+
+
+
+
+
+
+printf ( "x" "1" "= %d, x" "2" "= %s" , x1 , x2 ) ; 
+fputs ( 
+"strncmp(\"abc\\0d\", \"abc\", '\\4') == 0" ": @\n" , s ) ; 
+# 0 "vers2.h"
+
+
+vers2 . h included 
+# 17 "cpp.005.in"
+"hello" ; 
+"hello" ", world" 
