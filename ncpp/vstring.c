@@ -31,13 +31,6 @@
 #include <ctype.h>
 #include "ncpp.h"
 
-/* the more buckets the better, to a point. for optimal performance,
-   NR_STRING BUCKETS should really be a power of two. */
-
-#define NR_STRING_BUCKETS 16
-
-static struct string * buckets[NR_STRING_BUCKETS];
-
 /* the initial capacity of a vstring. there is probably a 'best' value for 
    any given standard library, but 16 seems pretty safe for now. */
 
