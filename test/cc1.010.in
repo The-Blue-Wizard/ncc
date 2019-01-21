@@ -1,0 +1,45 @@
+/* the point here is to stress out the register
+   allocator. the values computed aren't meaningful. */
+
+#include "support.h"
+
+main()
+{
+    int i1, i2, i3, i4, i5, i6, i7, i8, i9;
+    int n1, n2, n3, n4, n5, n6, n7, n8, n9;
+
+    int n = 1;
+
+    for (n1 = n, i1 = 0; i1 < 1; ++i1) {
+        n += n1;
+        for (n2 = n, i2 = 0; i2 < 2; ++i2) {
+            n += n2;
+            for (n3 = n, i3 = 0; i3 < 3; ++i3) {
+                n += n3;
+                for (n4 = n, i4 = 0; i4 < 4; ++i4) {
+                    n += n4;
+                    for (n5 = n, i5 = 0; i5 < 5; ++i5) {
+                        n += n5;
+                        for (n6 = n, i6 = 0; i6 < 6; ++i6) {
+                            n += n6;
+                            for (n7 = n, i7 = 0; i7 < 7; ++i7) {
+                                n += n7;
+                                for (n8 = n, i8 = 0; i8 < 8; ++i8) {
+                                    n += n8;
+                                    for (n9 = n, i9 = 0; i9 < 9; ++i9) {
+                                        n += n9;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    putn(n);
+    putn(i1 + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9);
+    putn(n1 + n2 + n3 + n4 + n5 + n6 + n7 + n8 + n9);
+    return 0;
+}
