@@ -104,7 +104,7 @@ void
 pseudo_fill(void)
 {
     long length;
-    char fill = 0;
+    long fill = 0;
 
     length = constant_expression();
     if (token != ',') error("missing fill value");
