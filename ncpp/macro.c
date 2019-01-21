@@ -270,7 +270,8 @@ macro_undef(struct vstring * name)
             list_free(macro->replacement);
             if (macro->arguments) list_free(macro->arguments);
             free(macro);
-        }
+            break;
+        } 
         ptr = &((*ptr)->link);
     }
 }
