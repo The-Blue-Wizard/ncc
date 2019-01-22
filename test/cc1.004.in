@@ -1,0 +1,11 @@
+/* tentative definitions, only one 'a' should exist. */
+
+int a;
+int a;
+
+int
+main(void)
+{
+    putn(a);
+    return 0;
+}

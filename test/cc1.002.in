@@ -12,6 +12,12 @@ main(void)
     putn(2147483648);
     putn(9223372036854775807);
     putn(-9223372036854775808);
+    putb(0xDE);
+    putb(0xAD);
+    putb(0xBE);
+    putb(0xEF);
+    putb(0xFA);
+    putb(0xCE);
+    putc('\n');
     return 0;
 }
-

@@ -7,6 +7,24 @@ puts(const char *s)
     putc('\n');
 }
 
+void 
+putb(int b)
+{
+    static char xdigits[] = "0123456789ABCDEF";
+
+    putc(xdigits[(b >> 4) & 0x0F]);
+    putc(xdigits[b & 0x0F]);
+}
+
+void
+putobj(void * obj, int length)
+{
+    unsigned char * b = obj;
+
+    while (length--) putb(*b++);
+    putc('\n');
+}
+
 void
 putn(long l)
 {
