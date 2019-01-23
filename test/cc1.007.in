@@ -1,0 +1,11 @@
+/* union init */
+
+union x
+{
+    char * s;
+    int i;
+};
+
+union x x1 = { "hello" };
+union x x2 = { "hello", 2 };        /* error */
+

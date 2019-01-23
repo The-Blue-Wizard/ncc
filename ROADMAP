@@ -12,8 +12,6 @@ are all really minor issues:
 
 - trigraphs (*)
 
-- initialization of unions
-
 - disallow 'auto' storage class in function formal arguments
 
 (*) = does anyone really care?

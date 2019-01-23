@@ -98,11 +98,14 @@ cc1_test()
     $CC1 cc1.test.tmp cc1.test.s 2>cc1.test.err
     check_files cc1 $number err
 
-    error_free $AS -o cc1.test.o cc1.test.s 
-    error_free $LD -b $BASE_ADDRESS -e _main -o cc1.test.aout cc1.test.o support.o
-    error_free $EXEC -b $BASE_ADDRESS cc1.test.aout >cc1.test.out
+    if [ ! -e cc1.$number.err ] 
+    then
+        error_free $AS -o cc1.test.o cc1.test.s 
+        error_free $LD -b $BASE_ADDRESS -e _main -o cc1.test.aout cc1.test.o support.o
+        error_free $EXEC -b $BASE_ADDRESS cc1.test.aout >cc1.test.out
 
-    check_files cc1 $number out
+        check_files cc1 $number out
+    fi
 
     rm -f cc1.test.tmp
     rm -f cc1.test.s

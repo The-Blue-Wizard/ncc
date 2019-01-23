@@ -160,14 +160,13 @@ initialize_struct(struct type * type, int outermost)
     int             adjust_bits;
     int             braced = 0;
 
+    member = type->tag->list;
     if (outermost) expect(KK_LBRACE);
+
     if (token.kk == KK_LBRACE) {
         ++braced;
         lex();
     }
-
-    member = type->tag->list;
-    if (type->tag->ss & S_UNION) error(ERROR_BADINIT);
 
     for (;;) {
         adjust_bits = (member->i * BITS) + T_GET_SHIFT(member->type->ts) - offset_bits;
@@ -183,6 +182,7 @@ initialize_struct(struct type * type, int outermost)
 
         member = member->list;
         if (member == NULL) break;
+        if (type->tag->ss & S_UNION) break;
 
         if (token.kk == KK_COMMA) {
             lex();

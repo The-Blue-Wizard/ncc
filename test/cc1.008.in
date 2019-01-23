@@ -1,0 +1,27 @@
+/* union init */
+
+#include "support.h"
+
+union x
+{
+    char * s;
+    int i;
+} x[] = {
+    "hello",
+    0, 
+    { "hello2" }
+};
+
+#define NR_X (sizeof(x)/sizeof(*x))
+
+int
+main(void)
+{
+    int i;
+
+    for (i = 0; i < NR_X; ++i) 
+        if (x[i].s) puts(x[i].s);
+
+    return 0;
+}
+
