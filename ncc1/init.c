@@ -181,14 +181,14 @@ initialize_struct(struct type * type, int outermost)
         else
             offset_bits += size_of(member->type) * 8;
 
+        member = member->list;
+        if (member == NULL) break;
+
         if (token.kk == KK_COMMA) {
             lex();
             prohibit(KK_RBRACE);
         } else
             break;
-
-        member = member->list;
-        if (member == NULL) break;
     }
 
     if (braced) match(KK_RBRACE);

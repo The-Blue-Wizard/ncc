@@ -1,0 +1,27 @@
+/* struct init: brace elision */
+
+#include "support.h"
+
+struct x
+{
+    int a, b;
+} x[] = {
+    { 1, 2 },
+    3, 4, 
+    { 3 },
+    5
+};
+
+#define NR_X (sizeof(x)/sizeof(*x))
+
+int
+main(void)
+{
+    int i;
+
+    for (i = 0; i < NR_X; ++i)
+        putobj(&x[i], sizeof(struct x));
+
+    return 0;
+}
+
