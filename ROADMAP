@@ -1,7 +1,7 @@
 ANSI CONFORMANCE
 ================
 
-for 100% ANSI compliance, the follow need to be addressed. these
+for 100% ANSI compliance, the following need to be addressed. these 
 are all really minor issues:
 
 - concatenatation of adjacent string literals
@@ -13,6 +13,9 @@ are all really minor issues:
 - trigraphs (*)
 
 - disallow 'auto' storage class in function formal arguments
+
+- proper handling of redeclaring globals with differing storage classes
+  (static-after-extern vs extern-after-static)
 
 (*) = does anyone really care?
 
