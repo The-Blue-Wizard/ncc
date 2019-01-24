@@ -1,0 +1,4 @@
+/* invalid octal escape sequence */
+
+'\777'
+

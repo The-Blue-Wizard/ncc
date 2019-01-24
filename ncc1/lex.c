@@ -87,8 +87,8 @@ fcon(void)
 /* returns the next character of a char constant or string literal,
    interpreting escape codes. */
 
-#define ISODIGIT(c)     (isdigit(c) && ((c) < '8'))
-#define DIGIT_VALUE(c)  ((c) - '0')
+#define isodigit(c)     (isdigit(c) && ((c) < '8'))
+#define DIGIT_VALUE(c)  ((((c) >= '0') && ((c) <= '9')) ? ((c) - '0') : (toupper(c) - 'A' + 10))
 
 static int
 escape(void)
@@ -96,29 +96,45 @@ escape(void)
     int c;
 
     if (*yytext == '\\') {
-        yytext++;
+        ++yytext;
         switch (*yytext) {
-        case 'b': c = '\b'; yytext++; break;
-        case 'f': c = '\f'; yytext++; break;
-        case 'n': c = '\n'; yytext++; break;
-        case 'r': c = '\r'; yytext++; break;
-        case 't': c = '\t'; yytext++; break;
+        case 'a': c = '\a'; ++yytext; break;
+        case 'b': c = '\b'; ++yytext; break;
+        case 'f': c = '\f'; ++yytext; break;
+        case 'n': c = '\n'; ++yytext; break;
+        case 'r': c = '\r'; ++yytext; break;
+        case 't': c = '\t'; ++yytext; break;
+        case 'v': c = '\v'; ++yytext; break;
 
         case '0': case '1': case '2': case '3':
         case '4': case '5': case '6': case '7':
             c = DIGIT_VALUE(*yytext);
             yytext++;
-            if (ISODIGIT(*yytext)) {
+            if (isodigit(*yytext)) {
                 c <<= 3;
                 c += DIGIT_VALUE(*yytext);
                 yytext++;
-                if (ISODIGIT(*yytext)) {
+                if (isodigit(*yytext)) {
                     c <<= 3;
                     c += DIGIT_VALUE(*yytext);
                     yytext++;
                 }
             }
             if (c > UCHAR_MAX) error(ERROR_ESCAPE);
+            break;
+        
+        case 'x':
+            c = 0;
+            ++yytext;
+            if (!isxdigit(*yytext)) error(ERROR_ESCAPE);
+
+            while (isxdigit(*yytext)) {
+                if (c & 0xF0) error(ERROR_ESCAPE);
+                c <<= 4;
+                c += DIGIT_VALUE(*yytext);
+                ++yytext;
+            }
+
             break;
 
         default:

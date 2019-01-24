@@ -69,7 +69,7 @@ static char *errors[] =
     "integral constant out of range",       /* ERROR_IRANGE */
     "malformed floating constant",          /* ERROR_BADFCON */
     "floating constant out of range",       /* ERROR_FRANGE */
-    "invalid octal escape sequence",        /* ERROR_ESCAPE */
+    "invalid escape sequence",              /* ERROR_ESCAPE */
     "unterminated string literal",          /* ERROR_UNTERM */
     "invalid character constant",           /* ERROR_BADCCON */
     "overflow in multi-character constant", /* ERROR_CRANGE */

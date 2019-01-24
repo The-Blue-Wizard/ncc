@@ -1,0 +1,19 @@
+/* character escape sequences */
+
+int
+main(void)
+{
+    if ('\a' == 7) putc('a');
+    if ('\b' == 8) putc('b');
+    if ('\f' == 12) putc('f');
+    if ('\n' == 10) putc('n');
+    if ('\r' == 13) putc('r');
+    if ('\t' == 9) putc('t');
+    if ('\v' == 11) putc('v');
+    if ('\?' == 11) putc('?');
+    if ('\'' == 11) putc('\'');
+    if ('\"' == 11) putc('\"');
+
+    puts("hello\x4b\101");
+    return 0;
+}

@@ -1,0 +1,4 @@
+/* invalid hex escape sequence */
+
+'\x441'     /* invalid */
+
