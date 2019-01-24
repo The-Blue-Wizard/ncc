@@ -1,0 +1,19 @@
+/* string concatenation */
+
+#include "support.h"
+
+char *x = 
+    "hello"
+    "..there"
+#if 0 
+    "do not print this"
+#endif
+;
+
+int
+main(void)
+{
+    puts(x);
+    return 0;
+}
+

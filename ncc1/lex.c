@@ -43,6 +43,11 @@ static int    yylen;        /* length of current token */
 static char * yybuf;        /* token buffer */
 static char * yytext;       /* pointer into yytext */
 
+/* normally, adjacent string literals are concatenated. setting
+   this flag prevents that when processing # line directives. */
+
+static int    directive;
+
 /* a pushback buffer for peek(). priming this with KK_NL is a trick
    that makes the logic in lex() work properly on the first call. */
 
@@ -150,11 +155,16 @@ strlit(void)
     char *  cp = yytext;
     int     length = 0;
 
-    yytext++; 
-    while (*yytext != '\"') {
-        *cp++ = escape();
-        length++;
-    }
+    do {
+        ++yytext;   /* opening quote */
+
+        while (*yytext != '\"') {
+            *cp++ = escape();
+            length++;
+        }
+
+        ++yytext;   /* closing quote */
+    } while (*yytext);
 
     token.u.text = stringize(data, length);
     return KK_STRLIT;
@@ -178,6 +188,27 @@ yystash(int c)
 
     yybuf[yylen++] = c;
     yybuf[yylen] = 0;
+}
+
+/* deal with "delimited" tokens, i.e., character constants
+   and string literals; delimiter is ' or ", respectively. */
+
+static void
+delimited(int delimiter)
+{
+    int backslash = 1; /* fake out first loop */
+
+    while ((yych >= 0) && (yych != '\n')) {
+        yystash(yych);
+        if ((yych == delimiter) && !backslash) break;
+        backslash = (yych == '\\') && !backslash;
+        yynext();
+    }
+
+    if ((yych < 0) || (yych == '\n')) 
+        error((delimiter == '"') ? ERROR_UNTERM : ERROR_BADCCON);
+
+    yynext();   /* eat closing delimiter */
 }
 
 /* called by main() after setting 'yyin' but before the first
@@ -275,8 +306,7 @@ icon(void)
 static int
 yylex(void)
 {
-    int             delim;
-    int             backslash;
+    int newlines;   /* for string literals */
 
     while (isspace(yych) && (yych != '\n'))
         yynext();
@@ -474,26 +504,33 @@ yylex(void)
         return KK_LT;
 
     case '\'':
-    case '\"':
-        delim = yych;
-        backslash = 1;  /* fake out first loop */
+        delimited('\'');
+        return ccon();
 
-        while ((yych >= 0) && (yych != '\n')) {
-            yystash(yych);
-            if ((yych == delim) && !backslash) break;
-            backslash = (yych == '\\') && !backslash;
-            yynext();
+    case '\"':
+        /* adjacent string literals are treated as one string literal.
+           these tokens can span lines, so we need special handling */
+
+        do {
+            delimited('\"');
+            newlines = 0;
+
+            while (isspace(yych) && !directive) {
+                if (yych == '\n') {
+                    ++newlines;
+                    ++line_number;
+                }
+                yynext();
+            }
+        } while ((yych == '\"') && !directive);
+
+        if (newlines) {
+            --line_number;
+            ungetc(yych, yyin);
+            yych = '\n';
         }
 
-        if ((yych < 0) || (yych == '\n')) 
-            error((delim == '"') ? ERROR_UNTERM : ERROR_BADCCON);
-
-        yynext();   /* eat closing delimiter */
-
-        if (delim == '"')
-            return strlit();
-        else
-            return ccon();
+        return strlit();
 
     default: /* fall through */ ;
     }
