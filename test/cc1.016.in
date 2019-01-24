@@ -1,0 +1,29 @@
+/* test "local" externs */
+
+#include "support.h"
+
+static int a;
+extern int a;
+
+void
+f(void)
+{
+    int a;
+
+    {
+        extern int a;
+        a = 2;
+    }
+
+    a = 3;
+}
+
+int
+main(void)
+{
+    a = 1;
+    putn(a);
+    f();
+    putn(a);
+    return 0;
+}

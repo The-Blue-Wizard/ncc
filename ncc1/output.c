@@ -405,7 +405,7 @@ output_function(void)
 
     block = first_block;
     segment(SEGMENT_TEXT);
-    if (current_function->ss & S_EXTERN) output(".global %G\n", current_function);
+    if (current_function->ss & S_EXTERN) current_function->ss |= S_REFERENCED;
     output("%G:\n", current_function);
 
     for (block = first_block; block; block = block->next) {

@@ -1,0 +1,5 @@
+/* can't declare a variable static after it's 
+   been declared extern */
+
+extern int a;
+static int a;

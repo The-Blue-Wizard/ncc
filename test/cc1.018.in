@@ -1,0 +1,5 @@
+/* can't declare a function static after it's 
+   been declared extern */
+
+int f();
+static int f();

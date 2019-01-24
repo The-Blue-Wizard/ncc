@@ -673,7 +673,7 @@ declare_local(int ss, struct string * id, struct type * type, void * data, int f
     }
 
     if (ss & S_EXTERN) {
-        symbol = find_symbol(id, S_EXTERN | S_LURKER, SCOPE_GLOBAL, SCOPE_GLOBAL);
+        symbol = find_symbol(id, S_EXTERN | S_STATIC | S_LURKER, SCOPE_GLOBAL, SCOPE_GLOBAL);
 
         if (symbol)
             compat_types(symbol->type, type, 0);
@@ -681,6 +681,8 @@ declare_local(int ss, struct string * id, struct type * type, void * data, int f
             symbol = new_symbol(id, S_EXTERN | S_LURKER, copy_type(type));
             put_symbol(symbol, SCOPE_GLOBAL);
         }
+
+        if (symbol->ss & S_EXTERN) symbol->ss |= S_REFERENCED;
     } 
 
     if (ss == S_NONE) ss = S_LOCAL;
@@ -806,7 +808,9 @@ declare_global(int ss, struct string * id, struct type * type, void * data, int 
     symbol = find_symbol(id, S_NORMAL | S_LURKER, SCOPE_GLOBAL, SCOPE_GLOBAL);
 
     if (symbol) {
-        if (symbol->ss & effective_ss & (S_EXTERN | S_STATIC)) {
+        if (    (symbol->ss & effective_ss & (S_EXTERN | S_STATIC))         /* = same storage class */
+            ||  ((symbol->ss & S_STATIC) && (effective_ss & S_EXTERN)) )    /* static redeclared extern is OK */
+        {
             compat_types(symbol->type, type, COMPAT_TYPES_COMPOSE | COMPAT_TYPES_QUALS);
             free_type(type);
         } else

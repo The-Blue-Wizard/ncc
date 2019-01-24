@@ -10,9 +10,6 @@ are all really minor issues:
 
 - disallow 'auto' storage class in function formal arguments
 
-- proper handling of redeclaring globals with differing storage classes
-  (static-after-extern vs extern-after-static)
-
 (*) = does anyone really care?
 
 
