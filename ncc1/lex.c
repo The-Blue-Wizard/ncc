@@ -663,7 +663,9 @@ lex(void)
         line_number++;
         ylex();
         while (token.kk == KK_HASH) {
+            directive = 1;
             ylex();
+
             if (token.kk == KK_ICON) {
                 line_number = token.u.i;
                 ylex();
@@ -678,6 +680,7 @@ lex(void)
                the error is in grokking the location. */
 
             if (token.kk != KK_NL) error(ERROR_DIRECTIVE);
+            directive = 0;
             ylex();
         }
     }

@@ -1,0 +1,14 @@
+/* ensure string concatenation doesn't lose track of lines */
+
+#include "support.h"
+
+char *x = 
+    "hello"
+
+    "..there"
+#if 0 
+    "do not print this"
+#endif
+;
+
+||      /* error */

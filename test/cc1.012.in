@@ -1,0 +1,5 @@
+/* make sure string concatenation doesn't occur
+   in # line directives. examine the preprocessor
+   output to understand the test */
+
+"ergh" "glarp"
