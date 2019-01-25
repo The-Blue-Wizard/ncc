@@ -29,13 +29,6 @@ GENERAL
 CODE GENERATION IMPROVEMENTS (ncc)
 ==================================
 
-- struct assignment
-
-    should inline copies where appropriate (e.g., small structures) rather
-    than calling a library function. the synthetic I_BLKCPY instruction should 
-    probably go away, and instead make the inline copy or library call explicit
-    in the IR so the code is available to the optimizer.
-
 - switch statements
 
     the code generated is very naive. for small numbers of switch cases this
