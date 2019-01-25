@@ -691,7 +691,7 @@ primary_expression(void)
     case KK_IDENT:
         id = token.u.text;
         lex();
-        symbol = find_symbol(id, S_NORMAL | S_LURKER, SCOPE_GLOBAL, current_scope);
+        symbol = find_symbol(id, S_NORMAL, SCOPE_GLOBAL, current_scope);
 
         if (symbol == NULL) {
             if (token.kk == KK_LPAREN) {
