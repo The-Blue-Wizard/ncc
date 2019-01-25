@@ -292,7 +292,7 @@ lvalue(struct tree * tree)
    2. convert array into rvalue pointer to its first element,
    3. convert function to pointer-to-function. */
 
-static struct tree *
+struct tree *
 promote(struct tree * tree)
 {
     struct type * type;

@@ -326,6 +326,7 @@ switch_statement(void)
     lex();
     match(KK_LPAREN);
     tree = expression();
+    tree = promote(tree);
     tree = generate(tree, GOAL_VALUE, NULL);
     if (!(tree->type->ts & T_IS_INTEGRAL)) error(ERROR_CASE);
     switch_type = copy_type(tree->type);
