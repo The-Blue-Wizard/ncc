@@ -1,0 +1,58 @@
+/* struct return */
+
+#include "support.h"
+
+struct s1       /* s1 copied inline */
+{
+    int a;
+    int b;
+    int c;
+    int d;
+};
+
+struct s2       /* s2 copied via __blkcpy */
+{
+    long a;
+    long b;
+    long c;
+    long d;
+    long e;
+};
+
+struct s1 s1_func(struct s1 in)
+{
+    in.a += 1;
+    in.b += 2;
+    in.c += 3;
+    in.d += 4;
+
+    return in;
+}
+
+struct s2 s2_func(struct s2 in)
+{
+    in.a += 2;
+    in.b += 3;
+    in.c += 4;
+    in.d += 5;
+    in.e += 6;
+
+    return in;
+}
+
+int
+main(void)
+{
+    struct s1 s1 = { 1, 2, 3, 4 }, s1_ret;
+    struct s2 s2 = { 1, 2, 3, 4, 5 }, s2_ret;
+
+    s1_ret = s1_func(s1);
+    s2_ret = s2_func(s2);
+
+    putobj(&s1, sizeof(s1));
+    putobj(&s1_ret, sizeof(s1_ret));
+    putobj(&s2, sizeof(s2));
+    putobj(&s2_ret, sizeof(s2_ret));
+
+    return 0;
+}
