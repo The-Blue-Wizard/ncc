@@ -695,6 +695,14 @@ declare_local(int ss, struct string * id, struct type * type, void * data, int f
     return 0;
 }
 
+/* process an implicit function declaration */
+
+void
+declare_implicit(struct string * id)
+{
+    declare_local(S_EXTERN, id, splice_types(new_type(T_FUNC), new_type(T_INT)), NULL, 0);
+}
+
 void
 local_declarations(void)
 {

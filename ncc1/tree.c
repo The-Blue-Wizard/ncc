@@ -695,8 +695,8 @@ primary_expression(void)
 
         if (symbol == NULL) {
             if (token.kk == KK_LPAREN) {
-                symbol = new_symbol(id, S_EXTERN | S_LURKER, splice_types(new_type(T_FUNC), new_type(T_INT)));
-                put_symbol(symbol, SCOPE_GLOBAL);
+                declare_implicit(id); 
+                symbol = find_symbol(id, S_NORMAL, current_scope, current_scope);
             } else 
                 error(ERROR_UNKNOWN);
         }

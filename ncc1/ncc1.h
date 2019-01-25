@@ -203,6 +203,7 @@ extern void            commute_tree(struct tree *);
 extern void            compat_types(struct type *, struct type *, int);
 extern void            initializer(struct symbol *, int);
 extern struct tree   * generate(struct tree *, int, int *);
+extern void            declare_implicit(struct string *);
 
 #ifndef NDEBUG
 extern void             debug_type(struct type *);
