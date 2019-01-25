@@ -1,0 +1,86 @@
+/* struct arguments */
+
+#include "support.h"
+
+struct s1       /* s1, s2, s3 copied inline */
+{
+    int a;
+    int b;
+    int c;
+    int d;
+};
+
+struct s2
+{
+    int a;
+    int b;
+    int c;
+    int d;
+    int e;
+};
+
+struct s3
+{
+    short x;
+    char c[5];
+};
+
+struct s4       /* s4 copied via __blkcpy */
+{
+    long a;
+    long b;
+    long c;
+    long d;
+    long e;
+};
+
+void
+puts1s2(struct s1 s1, int x1, struct s2 s2, int x2)
+{
+    putn(x1);
+    putn(x2);
+    putobj(&s1, sizeof(s1));
+    putobj(&s2, sizeof(s2));
+}
+
+void
+puts3s4(struct s3 s3, int x1, struct s4 s4, int x2)
+{
+    putn(x1);
+    putn(x2);
+    putobj(&s3, sizeof(s3));
+    putobj(&s4, sizeof(s4));
+}
+
+int
+main(void)
+{
+    struct s1 s1_1 = { 1, 2, 3, 4 };
+    struct s1 s1_2 = { 0 };
+    struct s2 s2_1 = { 1, 2, 3, 4, 5 };
+    struct s2 s2_2 = { 0 };
+    struct s3 s3_1 = { 1, "hello" };
+    struct s3 s3_2 = { 0 };
+    struct s4 s4_1 = { 1, 2, 3, 4, 5 };
+    struct s4 s4_2 = { 0 };
+
+    putobj(&s1_1, sizeof(s1_1));
+    putobj(&s1_2, sizeof(s1_2));
+    s1_2 = s1_1;
+
+    putobj(&s2_1, sizeof(s2_1));
+    putobj(&s2_2, sizeof(s2_2));
+    s2_2 = s2_1;
+
+    putobj(&s3_1, sizeof(s3_1));
+    putobj(&s3_2, sizeof(s3_2));
+    s3_2 = s3_1;
+
+    putobj(&s4_1, sizeof(s4_1));
+    putobj(&s4_2, sizeof(s4_2));
+    s4_2 = s4_1;
+
+    puts1s2(s1_2, 1, s2_2, 2);
+    puts3s4(s3_2, 3, s4_2, 4);
+    return 0;
+}

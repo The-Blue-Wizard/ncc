@@ -293,20 +293,6 @@ static char *insns[] =
 
 #define NR_INSNS (sizeof(insns)/sizeof(*insns))
 
-/* handle the synthetic instructon I_BLKCPY. for now, always invokes the
-   'blkcpy' library function. should be modified to inline small copies. */
-
-static void
-blkcpy(struct insn * insn)
-{
-    blkcpy_used = 1;
-
-    output(" lea rax, qword %O ; blkcpy\n", insn->operand[0]);
-    output(" lea rdx, qword %O\n", insn->operand[1]);
-    output(" mov ecx, %d\n", size_of(insn->operand[0]->type));
-    output(" call blkcpy");
-}
-
 /* output a block. the main task of this function is to output the 
    instructions -- a simple task. the debugging data is most of the work! */
 
@@ -373,17 +359,12 @@ output_block(struct block * block)
     output("\n%L:\n", block->asm_label);
 
     for (insn = block->first_insn; insn; insn = insn->next) {
+        if (I_IDX(insn->opcode) >= NR_INSNS) error(ERROR_INTERNAL);
+        output(" %s ", insns[I_IDX(insn->opcode)]);
 
-        if (insn->opcode == I_BLKCPY) {
-            blkcpy(insn);
-        } else {
-            if (I_IDX(insn->opcode) >= NR_INSNS) error(ERROR_INTERNAL);
-            output(" %s ", insns[I_IDX(insn->opcode)]);
-
-            for (i = 0; i < I_NR_OPERANDS(insn->opcode); i++) {
-                if (i) output(",");
-                output("%O", insn->operand[i]);
-            }
+        for (i = 0; i < I_NR_OPERANDS(insn->opcode); i++) {
+            if (i) output(",");
+            output("%O", insn->operand[i]);
         }
         
         if ((insn->flags & INSN_FLAG_CC) && g_flag) output(" ; FLAG_CC");

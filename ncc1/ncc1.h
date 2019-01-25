@@ -73,7 +73,6 @@
 #include "block.h"
 #include "peep.h"
 
-extern int              blkcpy_used;
 extern int              g_flag;
 extern int              O_flag;
 extern FILE *           yyin;
@@ -97,6 +96,7 @@ extern struct block *   current_block;
 extern struct block *   exit_block;
 extern struct block *   first_block;
 extern struct block *   last_block;
+extern struct symbol  * blkcpy_symbol;
 
 extern void            error(int);
 extern void            compound(void);

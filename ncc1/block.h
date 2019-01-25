@@ -275,6 +275,8 @@ struct insn
 #define I_INC       (  57 | I_1_OPERANDS | I_DEF(0) | I_USE(0) | I_DEF_CC )
 #define I_DEC       (  58 | I_1_OPERANDS | I_DEF(0) | I_USE(0) | I_DEF_CC )
 
+/* these pseudo-instructions will never appear in a block */
+
 #define I_ANY       ( 200 | I_0_OPERANDS )
-#define I_BLKCPY    ( 201 | I_2_OPERANDS | I_DEF(0) | I_USE(1) | I_DEF_AX | I_DEF_CX | I_DEF_DX | I_DEF_CC )
+#define I_BLKCPY    ( 201 | I_2_OPERANDS )
 

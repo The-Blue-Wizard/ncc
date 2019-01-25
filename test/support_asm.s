@@ -21,3 +21,22 @@ _putc:		push rbp
 		pop rbp
 		ret
 
+; __blkcpy (compiler support)
+; RAX = src
+; RDX = dst
+; RCX = count
+
+.global ___blkcpy
+___blkcpy:	push rsi
+		push rdi
+
+		mov rdi, rdx
+		mov rsi, rax
+		cld
+		rep
+		movsb
+
+		pop rdi
+		pop rsi
+		ret
+

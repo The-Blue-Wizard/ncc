@@ -29,7 +29,6 @@
 #include <unistd.h>
 #include "ncc1.h"
 
-int             blkcpy_used;        /* if blkcpy is invoked */
 int             g_flag;             /* -g: produce debug info */
 int             O_flag;             /* -O: enable optimizations */
 FILE          * yyin;               /* lexical input */
@@ -48,11 +47,12 @@ int             frame_offset;
 int             save_iregs;         /* bitsets (1 << R_IDX(x)) of registers .. */
 int             save_fregs;         /* .. used in this function */
 int             loop_level;
-struct block *  first_block;
-struct block *  last_block;
-struct block *  current_block;
-struct block *  entry_block;
-struct block *  exit_block;
+struct block  * first_block;
+struct block  * last_block;
+struct block  * current_block;
+struct block  * entry_block;
+struct block  * exit_block;
+struct symbol * blkcpy_symbol;      /* lurking __blkcpy() for I_BLKCPY */
 
 /* report an error to the user, clean up, and abort.
    error messages must match the indices (ERROR_*) in cc1.h. */
@@ -194,12 +194,14 @@ main(int argc, char * argv[])
     yyin = fopen(argv[0], "r");
     if (!yyin) error(ERROR_INPUT);
 
+    blkcpy_symbol = new_symbol(stringize("__blkcpy", 8), S_EXTERN | S_LURKER, splice_types(new_type(T_FUNC), new_type(T_VOID)));
+    put_symbol(blkcpy_symbol, SCOPE_GLOBAL);
+
     yyinit();
     translation_unit();
     literals();
     tentatives();
     externs();
-    if (blkcpy_used) output(".global blkcpy\n");
     fclose(output_file);
     exit(0);
 }

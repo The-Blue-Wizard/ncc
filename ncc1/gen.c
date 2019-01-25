@@ -243,6 +243,95 @@ operand(struct tree * tree)
     return tree;
 }
 
+/* emit code to copy a block of data from 'right' to 'left'
+   (which are both E_MEM nodes). used for struct copies and
+   auto array initialization. if the number of copies needed
+   is less than BLKCPY_MAX_COPIES, the copy is inlined, else
+   a call to __blkcpy() is generated. */
+
+#define BLKCPY_MAX_COPIES 4
+
+static void
+blkcpy(struct tree * left, struct tree * right)
+{
+    struct tree * tree;
+    int           copies = 0;
+    int           bytes = size_of(left->type);
+    int           t;
+    int           size;
+
+    copies = bytes / 8;
+    bytes &= 7;
+
+    switch (bytes)
+    {
+    case 0: 
+        break;
+    case 1: 
+    case 2:
+    case 4:
+        ++copies; 
+        break;
+    case 3:
+    case 5:
+    case 6:
+        copies += 2;
+        break;
+    case 7:
+        copies += 3;
+        break;
+    }
+
+    if (copies > BLKCPY_MAX_COPIES) {   /* call __blkcpy (RAX=src,RDX=dst,RCX=len) */
+        emit(new_insn(I_MOV, reg_tree(R_CX, new_type(T_INT)), int_tree(T_INT, size_of(left->type)))); 
+
+        free_type(left->type);
+        left->type = new_type(T_LONG);
+        free_type(right->type);
+        right->type = new_type(T_LONG);
+
+        emit(new_insn(I_LEA, reg_tree(R_AX, new_type(T_LONG)), right));
+        emit(new_insn(I_LEA, reg_tree(R_DX, new_type(T_LONG)), left));
+
+        tree = new_tree(E_IMM, splice_types(new_type(T_PTR), copy_type(blkcpy_symbol->type)));
+        tree->u.mi.glob = blkcpy_symbol;
+        emit(new_insn(I_CALL, tree));
+        blkcpy_symbol->ss |= S_REFERENCED;
+    } else {
+        bytes = size_of(left->type);
+
+        while (bytes) {
+            if (bytes >= 8) {
+                t = T_LONG;
+                size = 8;
+            } else if (bytes >= 4) {
+                t = T_INT;
+                size = 4;
+            } else if (bytes >= 2) {
+                t = T_SHORT;
+                size = 2;
+            } else {
+                t = T_CHAR;
+                size = 1;
+            }
+
+            free_type(left->type);
+            left->type = new_type(t);
+            free_type(right->type);
+            right->type = new_type(t);
+            tree = temporary(new_type(t));
+            emit(new_insn(I_MOV, copy_tree(tree), copy_tree(right)));
+            emit(new_insn(I_MOV, copy_tree(left), tree));
+            bytes -= size;
+            left->u.mi.ofs += size;
+            right->u.mi.ofs += size;
+        }
+
+        free_tree(left);
+        free_tree(right);
+    }
+}
+
 /* given a tree 'op' and two operand trees, emit the first match in the
    table. an entry is considered a match when the 'op' is the same and the 
    operands' type bits are "covered" by the corresponding masks. 
@@ -336,7 +425,11 @@ choose(int op, struct tree * left, struct tree * right)
                 right->type = copy_type(left->type);
             }
 
-            emit(new_insn(choices[i].opcode, left, right));
+            if (choices[i].opcode == I_BLKCPY)
+                blkcpy(left, right);
+            else
+                emit(new_insn(choices[i].opcode, left, right));
+
             return 1;
         } else {
             free_tree(left);
@@ -774,7 +867,7 @@ generate_call(struct tree * tree, int goal, int * cc)       /* E_CALL */
         tree = addr_tree(memory_tree(return_struct));
         tree = generate(tree, GOAL_VALUE, 0);
         tree = operand(tree);
-        emit(new_insn(I_MOV, tree, reg_tree(R_AX, new_type(T_LONG))));
+        emit(new_insn(I_MOV, reg_tree(R_AX, new_type(T_LONG)), tree));
     }
 
     emit(new_insn(I_CALL, function));
