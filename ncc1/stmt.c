@@ -328,7 +328,6 @@ switch_statement(void)
     switch_cases = NULL;
     default_block = NULL;
     break_block = new_block();
-
     lex();
     match(KK_LPAREN);
     tree = expression();
@@ -340,26 +339,23 @@ switch_statement(void)
     choose(E_ASSIGN, copy_tree(reg_ax), tree);
     match(KK_RPAREN);
     control_block = current_block;
-
     current_block = new_block();
     statement();
     succeed_block(current_block, CC_ALWAYS, break_block);
     if (default_block == NULL) default_block = break_block;
-
     current_block = control_block;
 
     while (switch_cases) {
         struct switch_case * switch_case;
-        struct block       * tmp;
+        struct block       * tmp_block;
 
         switch_case = switch_cases;
         switch_cases = switch_cases->next;
-
-        put_insn(current_block, new_insn(I_CMP, copy_tree(reg_ax), switch_case->value), NULL);
+        choose(E_EQ, copy_tree(reg_ax), switch_case->value);
         succeed_block(current_block, CC_Z, switch_case->target);
-        succeed_block(current_block, CC_NZ, tmp = new_block());
-        current_block = tmp;
-
+        tmp_block = new_block();
+        succeed_block(current_block, CC_NZ, tmp_block);
+        current_block = tmp_block;
         free(switch_case);
     }
 
@@ -379,7 +375,8 @@ switch_statement(void)
 static void
 case_statement(void)
 {
-    struct switch_case   * switch_case;
+    struct switch_case ** switch_casep;
+    struct switch_case  * switch_case;
     struct tree         * value;
 
     if (switch_type == NULL) error(ERROR_MISPLACED);
@@ -399,15 +396,16 @@ case_statement(void)
         value = generate(value, GOAL_VALUE, NULL);
         if (value->op != E_CON) error(ERROR_CONEXPR);
 
-        for (switch_case = switch_cases; switch_case; switch_case = switch_case->next)
-            if (switch_case->value->u.con.i == value->u.con.i) error(ERROR_DUPCASE);
+        for (switch_casep = &switch_cases; *switch_casep; switch_casep = &((*switch_casep)->next)) {
+            if ((*switch_casep)->value->u.con.i == value->u.con.i) error(ERROR_DUPCASE); 
+            if ((*switch_casep)->value->u.con.i > value->u.con.i) break;
+        }
 
-        switch_case = (struct switch_case *) allocate(sizeof(struct switch_case));
+        switch_case = allocate(sizeof(struct switch_case));
         switch_case->value = value;
         switch_case->target = new_block();
-        switch_case->next = switch_cases;
-        switch_cases = switch_case;
-    
+        switch_case->next = *switch_casep;
+        *switch_casep = switch_case;
         succeed_block(current_block, CC_ALWAYS, switch_case->target);
         current_block = switch_case->target;
     }
