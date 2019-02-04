@@ -39,6 +39,7 @@ struct switch_case
    saving/restoring their contents in their activation records. */
 
 static struct switch_case * switch_cases;
+static int                  nr_switch_cases;
 static struct type        * switch_type;
 static struct block       * break_block;
 static struct block       * continue_block;
@@ -314,18 +315,21 @@ static void
 switch_statement(void)
 {
     struct switch_case * saved_switch_cases;
-    struct block      * saved_default_block;
-    struct block      * saved_break_block;
-    struct type       * saved_switch_type;
-    struct tree       * tree;
-    struct tree       * reg_ax;
-    struct block      * control_block;
-
+    int                  saved_nr_switch_cases;
+    struct block       * saved_default_block;
+    struct block       * saved_break_block;
+    struct type        * saved_switch_type;
+    struct tree        * tree;
+    struct tree        * reg_ax;
+    struct block       * control_block;
+    
     saved_switch_cases = switch_cases;
+    saved_nr_switch_cases = nr_switch_cases;
     saved_default_block = default_block;
     saved_break_block = break_block;
     saved_switch_type = switch_type;
     switch_cases = NULL;
+    nr_switch_cases = 0;
     default_block = NULL;
     break_block = new_block();
     lex();
@@ -364,6 +368,7 @@ switch_statement(void)
     free_type(switch_type);
     current_block = break_block;
     switch_cases = saved_switch_cases;
+    nr_switch_cases = saved_nr_switch_cases;
     default_block = saved_default_block;
     break_block = saved_break_block;
     switch_type = saved_switch_type;
@@ -406,6 +411,7 @@ case_statement(void)
         switch_case->target = new_block();
         switch_case->next = *switch_casep;
         *switch_casep = switch_case;
+        ++nr_switch_cases;
         succeed_block(current_block, CC_ALWAYS, switch_case->target);
         current_block = switch_case->target;
     }
