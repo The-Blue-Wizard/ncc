@@ -27,24 +27,26 @@
 
 /* switch cases are kept in a linked list */
 
-struct switchcase
+struct switch_case
 {
-    struct tree       * value;
-    struct block      * target;
-    struct switchcase * next;
+    struct tree        * value;
+    struct block       * target;
+    struct switch_case * next;
 };
 
 /* these variables are associated with the closest-enclosing 
    block of appropriate type. the parser routines deal with 
    saving/restoring their contents in their activation records. */
 
-static struct switchcase  * switchcases;
+static struct switch_case * switch_cases;
 static struct type        * switch_type;
 static struct block       * break_block;
 static struct block       * continue_block;
 static struct block       * default_block;
 
 static void statement(void);
+
+/* if-statement : IF '(' expression ')' statement */
 
 static void
 if_statement(void)
@@ -83,6 +85,8 @@ if_statement(void)
     succeed_block(else_block, CC_ALWAYS, join_block);
     current_block = join_block;
 }
+
+/* while-statement : WHILE '(' expression ')' statement */
 
 static void
 while_statement(void)
@@ -123,6 +127,8 @@ while_statement(void)
     break_block = saved_break_block;
 }
 
+/* do-statement : DO statement WHILE '(' expression ')' ';' */
+
 static void
 do_statement(void)
 {
@@ -159,6 +165,8 @@ do_statement(void)
     break_block = saved_break_block;
 }
 
+/* return-statement : RETURN [expression] ';' */
+
 static void
 return_statement(void)
 {
@@ -188,6 +196,8 @@ return_statement(void)
     current_block = new_block();
     match(KK_SEMI);
 }
+
+/* for-statement : FOR '(' [expression] ';' [expression] ';' [expression] ')' statement */
 
 static void
 for_statement(void)
@@ -261,15 +271,7 @@ compound(void)
     exit_scope(EXIT_SCOPE_BLOCK);
 }
 
-static void
-loop_control(struct block * block)
-{
-    lex();
-    if (block == NULL) error(ERROR_MISPLACED);
-    succeed_block(current_block, CC_ALWAYS, block);
-    current_block = new_block();
-    match(KK_SEMI);
-}
+/* label-statement : IDENTIFIER ':' statement */
 
 static void
 label_statement(void)
@@ -289,6 +291,8 @@ label_statement(void)
     statement();
 }
 
+/* goto-statement: GOTO IDENTIFIER ';' */
+
 static void
 goto_statement(void)
 {
@@ -304,10 +308,12 @@ goto_statement(void)
     current_block = new_block();
 }
 
+/* switch-statement: SWITCH '(' expression ')' statement */
+
 static void
 switch_statement(void)
 {
-    struct switchcase * saved_switchcases;
+    struct switch_case * saved_switch_cases;
     struct block      * saved_default_block;
     struct block      * saved_break_block;
     struct type       * saved_switch_type;
@@ -315,11 +321,11 @@ switch_statement(void)
     struct tree       * reg_ax;
     struct block      * control_block;
 
-    saved_switchcases = switchcases;
+    saved_switch_cases = switch_cases;
     saved_default_block = default_block;
     saved_break_block = break_block;
     saved_switch_type = switch_type;
-    switchcases = NULL;
+    switch_cases = NULL;
     default_block = NULL;
     break_block = new_block();
 
@@ -342,35 +348,38 @@ switch_statement(void)
 
     current_block = control_block;
 
-    while (switchcases) {
-        struct switchcase * switchcase;
-        struct block      * tmp;
+    while (switch_cases) {
+        struct switch_case * switch_case;
+        struct block       * tmp;
 
-        switchcase = switchcases;
-        switchcases = switchcases->next;
+        switch_case = switch_cases;
+        switch_cases = switch_cases->next;
 
-        put_insn(current_block, new_insn(I_CMP, copy_tree(reg_ax), switchcase->value), NULL);
-        succeed_block(current_block, CC_Z, switchcase->target);
+        put_insn(current_block, new_insn(I_CMP, copy_tree(reg_ax), switch_case->value), NULL);
+        succeed_block(current_block, CC_Z, switch_case->target);
         succeed_block(current_block, CC_NZ, tmp = new_block());
         current_block = tmp;
 
-        free(switchcase);
+        free(switch_case);
     }
 
     succeed_block(current_block, CC_ALWAYS, default_block);
-
     free_tree(reg_ax);
+    free_type(switch_type);
     current_block = break_block;
-    switchcases = saved_switchcases;
+    switch_cases = saved_switch_cases;
     default_block = saved_default_block;
     break_block = saved_break_block;
     switch_type = saved_switch_type;
 }
 
+/* case-statement : CASE constant-expression ':' statement 
+                  | DEFAULT ':' statement */
+
 static void
 case_statement(void)
 {
-    struct switchcase   * switchcase;
+    struct switch_case   * switch_case;
     struct tree         * value;
 
     if (switch_type == NULL) error(ERROR_MISPLACED);
@@ -390,21 +399,46 @@ case_statement(void)
         value = generate(value, GOAL_VALUE, NULL);
         if (value->op != E_CON) error(ERROR_CONEXPR);
 
-        for (switchcase = switchcases; switchcase; switchcase = switchcase->next)
-            if (switchcase->value->u.con.i == value->u.con.i) error(ERROR_DUPCASE);
+        for (switch_case = switch_cases; switch_case; switch_case = switch_case->next)
+            if (switch_case->value->u.con.i == value->u.con.i) error(ERROR_DUPCASE);
 
-        switchcase = (struct switchcase *) allocate(sizeof(struct switchcase));
-        switchcase->value = value;
-        switchcase->target = new_block();
-        switchcase->next = switchcases;
-        switchcases = switchcase;
+        switch_case = (struct switch_case *) allocate(sizeof(struct switch_case));
+        switch_case->value = value;
+        switch_case->target = new_block();
+        switch_case->next = switch_cases;
+        switch_cases = switch_case;
     
-        succeed_block(current_block, CC_ALWAYS, switchcase->target);
-        current_block = switchcase->target;
+        succeed_block(current_block, CC_ALWAYS, switch_case->target);
+        current_block = switch_case->target;
     }
     
     match(KK_COLON);
     statement();
+}
+
+/* statement : ';'
+             | compound-statement
+             | BREAK ';'
+             | CONTINUE ';'
+             | case-statement
+             | do-statement
+             | if-statement
+             | for-statement
+             | goto-statement
+             | switch-statement
+             | while-statement
+             | return-statement
+             | label-statement 
+             | expression ';' */
+
+static void
+loop_control(struct block * block)
+{
+    lex();
+    if (block == NULL) error(ERROR_MISPLACED);
+    succeed_block(current_block, CC_ALWAYS, block);
+    current_block = new_block();
+    match(KK_SEMI);
 }
 
 static void
