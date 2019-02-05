@@ -362,7 +362,7 @@ switch_statement(void)
     struct block       * saved_break_block;
     struct type        * saved_switch_type;
     struct tree        * tree;
-    struct tree        * reg_ax;
+    struct tree        * reg;
     struct block       * control_block;
     struct switch_case * switch_case;
     
@@ -382,8 +382,8 @@ switch_statement(void)
     tree = generate(tree, GOAL_VALUE, NULL);
     if (!(tree->type->ts & T_IS_INTEGRAL)) error(ERROR_CASE);
     switch_type = copy_type(tree->type);
-    reg_ax = reg_tree(R_AX, copy_type(switch_type));
-    choose(E_ASSIGN, copy_tree(reg_ax), tree);
+    reg = temporary(copy_type(switch_type));
+    choose(E_ASSIGN, copy_tree(reg), tree);
     match(KK_RPAREN);
     control_block = current_block;
     current_block = new_block();
@@ -391,7 +391,7 @@ switch_statement(void)
     succeed_block(current_block, CC_ALWAYS, break_block);
     if (default_block == NULL) default_block = break_block;
     current_block = control_block;
-    switch_search(reg_ax, switch_cases, nr_switch_cases);
+    switch_search(reg, switch_cases, nr_switch_cases);
 
     while (switch_case = switch_cases) {
         switch_cases = switch_cases->next;
@@ -399,7 +399,7 @@ switch_statement(void)
         free(switch_case);
     }
 
-    free_tree(reg_ax);
+    free_tree(reg);
     free_type(switch_type);
     current_block = break_block;
     switch_cases = saved_switch_cases;
