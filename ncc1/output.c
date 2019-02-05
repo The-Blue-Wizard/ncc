@@ -374,15 +374,15 @@ output_block(struct block * block)
 
 /* called after the code generator is complete, to output all the function blocks.
    the main task of this function is to glue the successive blocks together with
-   appropriate jump instructions, which is surprisingly tedious. */
+   appropriate jump instructions. */
 
 void
 output_function(void)
 {
     struct block * block;
-    struct block * successor1;
-    struct block * successor2;
-    int            cc1;
+    struct block * successor;
+    int            cc;
+    int            n;
 
     block = first_block;
     segment(SEGMENT_TEXT);
@@ -392,34 +392,11 @@ output_function(void)
     for (block = first_block; block; block = block->next) {
         output_block(block);
 
-        successor1 = block_successor(block, 0);
-        if (successor1) cc1 = block_successor_cc(block, 0);
+        for (n = 0; n < block->nr_successors; ++n) {
+            successor = block_successor(block, n);
+            cc = block_successor_cc(block, n);
 
-        /* there's no glue if there aren't any successors (exit block) */
-
-        if (!successor1) continue;
-
-        /* if there's only one successor, it should be unconditional,
-           so emit a jump unless the target is being output next. */
-    
-        if (block->nr_successors == 1) {
-            if (cc1 != CC_ALWAYS) error(ERROR_INTERNAL);
-            if (block->next != successor1) output(" jmp %L\n", successor1->asm_label);
-            continue;
-        }
-
-        /* the only remaining case is that of two successors, which must have opposite
-           condition codes. we make an extra effort here to emit unconditional branches,
-           rather than conditional ones, to minimize the impact on the branch predictor. */
-
-        successor2 = block_successor(block, 1);
-        if (block_successor_cc(block, 1) != CC_INVERT(cc1)) error(ERROR_INTERNAL);
-
-        if (successor1 == block->next) 
-            output(" %s %L\n", jmps[CC_INVERT(cc1)], successor2->asm_label);
-        else {
-            output(" %s %L\n", jmps[cc1], successor1->asm_label);
-            if (successor2 != block->next) output(" jmp %L\n", successor2->asm_label);
+            if (successor != block->next) output(" %s %L\n", jmps[cc], successor->asm_label);
         }
     }
 }

@@ -25,7 +25,8 @@
 #include <stdlib.h>
 #include "ncc1.h"
 
-/* switch cases are kept in a linked list */
+/* switch cases are kept in a linked list, 
+   ordered by 'value' (least to greatest) */
 
 struct switch_case
 {
@@ -309,6 +310,47 @@ goto_statement(void)
     current_block = new_block();
 }
 
+static void
+switch_search(struct tree * reg, struct switch_case * first, int count)
+{
+    struct switch_case * switch_case = first;
+    int                  lower_count = 0;
+    int                  higher_count = count - 1;
+    struct block       * lower_block;
+    struct block       * higher_block;
+    struct block       * temp_block;
+
+    if (count == 0) 
+        succeed_block(current_block, CC_ALWAYS, default_block);
+    else {
+        while ((lower_count < higher_count) && switch_case->next) {
+            switch_case = switch_case->next;
+            ++lower_count;
+            --higher_count;
+        }
+
+        temp_block = current_block;
+
+        lower_block = new_block();
+        current_block = lower_block;
+        switch_search(reg, first, lower_count);
+
+        higher_block = new_block();
+        current_block = higher_block;
+        switch_search(reg, switch_case->next, higher_count);
+
+        current_block = temp_block;
+        choose(E_EQ, copy_tree(reg), copy_tree(switch_case->value));
+        succeed_block(current_block, CC_Z, switch_case->target);
+
+        if (lower_count || higher_count) {
+            succeed_block(current_block, CC_L, lower_block);
+            succeed_block(current_block, CC_G, higher_block);
+        } else 
+            succeed_block(current_block, CC_NZ, default_block);
+    }
+}
+
 /* switch-statement: SWITCH '(' expression ')' statement */
 
 static void
@@ -322,6 +364,7 @@ switch_statement(void)
     struct tree        * tree;
     struct tree        * reg_ax;
     struct block       * control_block;
+    struct switch_case * switch_case;
     
     saved_switch_cases = switch_cases;
     saved_nr_switch_cases = nr_switch_cases;
@@ -348,22 +391,14 @@ switch_statement(void)
     succeed_block(current_block, CC_ALWAYS, break_block);
     if (default_block == NULL) default_block = break_block;
     current_block = control_block;
+    switch_search(reg_ax, switch_cases, nr_switch_cases);
 
-    while (switch_cases) {
-        struct switch_case * switch_case;
-        struct block       * tmp_block;
-
-        switch_case = switch_cases;
+    while (switch_case = switch_cases) {
         switch_cases = switch_cases->next;
-        choose(E_EQ, copy_tree(reg_ax), switch_case->value);
-        succeed_block(current_block, CC_Z, switch_case->target);
-        tmp_block = new_block();
-        succeed_block(current_block, CC_NZ, tmp_block);
-        current_block = tmp_block;
+        free_tree(switch_case->value);
         free(switch_case);
     }
 
-    succeed_block(current_block, CC_ALWAYS, default_block);
     free_tree(reg_ax);
     free_type(switch_type);
     current_block = break_block;

@@ -56,13 +56,11 @@ struct block
 };
 
 /* for successors, 'cc' is the branch condition that leads to
-   the successor. (predecessors have 'cc' = CC_NONE.)
+   the successor. (predecessors have 'cc' = CC_NONE.) 
 
-   rules regarding block successors:
-
-   0 successors: only the exit_block has no successors.
-   1 successor: 'cc' for the one successor is ALWAYS.
-   2 successors: the 'cc's are opposite conditions. */
+   only the exit block has no successors. all other successors
+   must be EXHAUSTIVE and EXCLUSIVE, meaning that all possible
+   conditions must be covered and the conditions can't overlap. */
 
 struct block_list
 {
