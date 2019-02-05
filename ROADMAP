@@ -29,13 +29,6 @@ GENERAL
 CODE GENERATION IMPROVEMENTS (ncc)
 ==================================
 
-- switch statements
-
-    the code generated is very naive. for small numbers of switch cases this
-    is appropriate, but for larger switches a binary search should be used,
-    either through (1) direct tests or (2) a table and a library function. the
-    choice of (1) or (2) would probably be dependent on the size of the switch.
-
 - register coalescing
 
     computations involving a temporary should compute directly into the target
