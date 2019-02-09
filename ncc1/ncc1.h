@@ -157,6 +157,7 @@ extern int             insn_nr_defs(struct insn *);
 extern int             insn_nr_uses(struct insn *);
 extern int             insn_touches_reg(struct insn *, int);
 extern void            insn_replace_reg(struct insn *, int, int);
+extern int             insn_reg_replaceable(struct insn *, int);
 extern int             peep_match(struct block *, struct insn *, struct peep_match *);
 extern void            free_tree(struct tree *);
 extern void            optimize(void);

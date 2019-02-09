@@ -109,6 +109,7 @@ struct defuse
     int             reg;
     int             cache;      /* DU_CACHE */
     int             con;        /* if DU_CON; see con_prop() [opt.c] */
+    int             copy;       /* if DU_COPY; see copy_prop() [opt.c] */
             
     /* first_n and last_n give the insn indexes (insn->n) of the first
        and last appearances of the symbol in the block.  if the symbol 
@@ -127,7 +128,8 @@ struct defuse
 #define DU_OUT          0x00000002      
 #define DU_DEF          0x00000004      /* def or use */
 #define DU_USE          0x00000008
-#define DU_CON          0x00000010      /* for const_prop() [opt.c] */
+#define DU_CON          0x00000010      /* for con_prop() [opt.c] */
+#define DU_COPY         0x00000020      /* for copy_prop() [opt.c] */
 
     /* the register allocator uses these fields to track the coherency
        between the ->reg and memory, for aliased (i.e., non S_REGISTER) */

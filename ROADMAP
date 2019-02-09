@@ -16,11 +16,6 @@ are all really minor issues:
 GENERAL
 =======
 
-- test suite
-
-    framework is complete(-ish), but need to add test cases.
-    the number of cases will ultimately be in the hundreds.
-
 - archives
 
     need an 'ar'-style librarian and support for archive files in nld 
@@ -33,11 +28,6 @@ CODE GENERATION IMPROVEMENTS (ncc)
 
     computations involving a temporary should compute directly into the target
     register when possible
-
-- copy propagation
-    
-    registers that mirror other registers can be eliminated and replaced with
-    the source registers. 
 
 - fuse loads/stores for aliased variables in register allocator
 

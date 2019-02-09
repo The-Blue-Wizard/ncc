@@ -421,6 +421,30 @@ insn_replace_reg(struct insn * insn, int x, int y)
     }
 }
 
+/* returns non-zero if the given register can be 
+   replaced with another in the given instruction.
+   the answer is 'yes' unless the register is 
+   implicit in the instruction. */
+
+int
+insn_reg_replaceable(struct insn * insn, int reg)
+{
+    int mask = 0;
+
+    switch (reg)
+    {
+    case R_AX: mask = I_DEF_AX | I_USE_AX; break;
+    case R_DX: mask = I_DEF_DX | I_USE_DX; break;
+    case R_CX: mask = I_DEF_CX; break;
+    case R_XMM0: mask = I_DEF_XMM0; break;
+    }
+
+    if (insn->opcode & mask) 
+        return 0;
+    else
+        return 1;
+}
+
 /* does 'reg' appear in 'regs[]'? */
 
 static int

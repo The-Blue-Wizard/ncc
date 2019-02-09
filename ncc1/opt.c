@@ -326,8 +326,11 @@ con_prop(struct block * block)
 
             reg = insn->operand[0]->u.reg;
             defuse = find_defuse(block, reg, FIND_DEFUSE_NORMAL);
-            defuse->dus |= DU_CON;
-            defuse->con = insn->operand[1]->u.con.i;
+
+            if (defuse) {
+                defuse->dus |= DU_CON;
+                defuse->con = insn->operand[1]->u.con.i;
+            }
         } else {
             /* propagate constants here! */
         }
@@ -363,17 +366,87 @@ con_prop(struct block * block)
     } else
         return 0;
 }
- 
+
+/* copy propagation: when an unaliased copy of another unaliased 
+   register is made, replace subsequent appearances of the latter 
+   with the former, until either register is modified. */
+
+static int
+copy_prop(struct block * block)
+{
+    static struct peep_match copy[] = 
+    {
+        { I_MOV, 0, { { T_IS_SCALAR, PMO_REG | PMO_UNALIASED }, { T_IS_SCALAR, PMO_REG | PMO_UNALIASED } } },
+        { I_NONE }
+    };
+
+    struct defuse * defuse;
+    struct insn   * insn;
+    int             i;
+    int             reg;
+    int             ret = 0;
+
+    for (insn = block->first_insn; insn; insn = insn->next) {
+        /* invalidate copy information for any registers DEFd */
+        
+        for (i = insn_nr_defs(insn) - 1; i >= 0; --i) {
+            reg = insn->regs_defd[i];
+
+            for (defuse = block->defuses; defuse; defuse = defuse->link) {
+                if (    (defuse->reg == reg)
+                    ||  ((defuse->dus & DU_COPY) && (defuse->copy == reg)) )
+                {
+                    defuse->dus &= ~DU_COPY;
+                }
+            }
+        }
+
+        /* remember copies */
+
+        if (peep_match(block, insn, copy)) {
+            reg = insn->operand[0]->u.reg;
+            defuse = find_defuse(block, reg, FIND_DEFUSE_NORMAL);
+
+            if (defuse) {
+                defuse->dus |= DU_COPY;
+                defuse->copy = insn->operand[1]->u.reg;
+            }
+
+            continue;
+        } 
+
+        /* replace copies */
+
+        for (i = insn_nr_uses(insn) - 1; i >= 0; --i) {
+            reg = insn->regs_used[i];
+            
+            if (    !insn_defs_reg(insn, reg)
+                &&  insn_reg_replaceable(insn, reg)
+                &&  (defuse = find_defuse(block, reg, FIND_DEFUSE_NORMAL))
+                &&  (defuse->dus & DU_COPY) )
+            {
+                insn_replace_reg(insn, reg, defuse->copy);
+                ret = -1;
+            }
+        }
+    }
+
+    return ret;
+}
+
+/* optimizer functions. these are executed in the order in which
+   they appear here, and that order is potentially important */
 
 struct optimizer
 {
     int     level;
     int ( * func ) (struct block *);
 } optimizers[] = {
-    { 1, peeps },       /* order needs to be thought out */
+    { 1, peeps },  
     { 1, coalesce },
     { 1, dead_stores },     
-    { 1, con_prop }
+    { 1, con_prop },
+    { 1, copy_prop }
 };
 
 #define NR_OPTIMIZERS (sizeof(optimizers)/sizeof(*optimizers))
