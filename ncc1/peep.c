@@ -79,8 +79,7 @@ peep_match(struct block * block, struct insn * insn, struct peep_match * pm)
 
                 if (pmos & PMO_UNALIASED) {
                     defuse = find_defuse(block, operand->u.reg, FIND_DEFUSE_NORMAL);
-                    if (!defuse) return 0;
-                    if (!(defuse->symbol->ss & S_REGISTER)) return 0;
+                    if (defuse && !(defuse->symbol->ss & S_REGISTER)) return 0;
                 }
             }
 
