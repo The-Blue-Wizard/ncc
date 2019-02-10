@@ -431,6 +431,28 @@ copy_prop(struct block * block)
         }
     }
 
+    /* push state down through extended basic block */
+
+    if (ret == 0) {
+        struct block  * successor;
+        struct defuse * successor_defuse;
+
+        for (i = 0; i < block->nr_successors; ++i) {
+            successor = block_successor(block, i);
+            if (successor->nr_predecessors > 1) continue;
+
+            for (defuse = block->defuses; defuse; defuse = defuse->link) {
+                if (!(defuse->dus & DU_COPY)) continue;
+                successor_defuse = find_defuse(successor, defuse->symbol->reg, FIND_DEFUSE_NORMAL);
+
+                if (successor_defuse) {
+                    successor_defuse->dus |= DU_COPY;
+                    successor_defuse->copy = defuse->copy;
+                }
+            }
+        }
+    }
+
     return ret;
 }
 
