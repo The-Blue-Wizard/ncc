@@ -95,7 +95,7 @@ cc1_test()
 
     error_free $CPP cc1.$number.in cc1.test.tmp
 
-    $CC1 cc1.test.tmp cc1.test.s 2>cc1.test.err
+    $CC1 $flags cc1.test.tmp cc1.test.s 2>cc1.test.err
     check_files cc1 $number err
 
     if [ ! -e cc1.$number.err ] 

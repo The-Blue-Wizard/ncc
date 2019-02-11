@@ -467,8 +467,8 @@ struct optimizer
     { 1, peeps },  
     { 1, coalesce },
     { 1, dead_stores },     
-    { 1, con_prop },
-    { 1, copy_prop }
+    { 1, con_prop }
+/*  { 1, copy_prop } */
 };
 
 #define NR_OPTIMIZERS (sizeof(optimizers)/sizeof(*optimizers))
